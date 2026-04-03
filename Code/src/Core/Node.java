@@ -397,7 +397,9 @@ public class Node {
         File[] files = folder.listFiles();
 
         for (File file : files) {
-            if (hashes.get(file.getAbsolutePath()) == hash) {
+            Integer fileHash = hashes.get(file.getAbsolutePath());
+
+            if (fileHash != null && fileHash.equals(hash)) {
                 return true;
             }
         }
