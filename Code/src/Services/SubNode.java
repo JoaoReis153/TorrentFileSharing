@@ -97,6 +97,11 @@ public class SubNode extends Thread {
             handleFileBlockRequest((FileBlockRequestMessage) obj);
         } else if (obj instanceof FileBlockAnswerMessage) {
             handleFileBlockAnswer((FileBlockAnswerMessage) obj);
+        } else {
+            System.out.println(
+                node.getAddressAndPortFormated() +
+                "Received unknown message type"
+            );
         }
     }
 
