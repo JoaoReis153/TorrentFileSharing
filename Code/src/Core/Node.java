@@ -139,7 +139,7 @@ public class Node {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                SubNode clientHandler = new SubNode(this, clientSocket, true);
+                SubNode clientHandler = new SubNode(this, clientSocket, false);
                 clientHandler.start();
                 peers.add(clientHandler);
             }

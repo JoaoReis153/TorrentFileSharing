@@ -28,7 +28,7 @@ public class SubNode extends Thread {
     private final Node node;
 
     private final Socket socket;
-    private final boolean userCreated;
+    private final boolean outgoingConnection;
 
     private ObjectOutputStream out;
     private ObjectInputStream in;
@@ -36,10 +36,10 @@ public class SubNode extends Thread {
     private boolean running = true;
     private CountDownLatch blockAnswerLatch;
 
-    public SubNode(Node node, Socket socket, boolean userCreated) {
+    public SubNode(Node node, Socket socket, boolean outgoingConnection) {
         this.node = node;
         this.socket = socket;
-        this.userCreated = userCreated;
+        this.outgoingConnection = outgoingConnection;
     }
 
     @Override
@@ -113,6 +113,27 @@ public class SubNode extends Thread {
      */
     private void handleNewConnectionRequest(NewConnectionRequest request) {
         this.originalBeforeOSchangePort = request.getClientPort();
+
+        if (!outgoingConnection && node.getGUI() != null) {
+            boolean accepted = node
+                    .getGUI()
+                    .confirmIncomingConnection(
+                            request.getClientAddress().getHostAddress(),
+                            request.getClientPort()
+                    );
+            if (!accepted) {
+                System.out.println(
+                        node.getAddressAndPortFormated() +
+                                "Rejected incoming connection from " +
+                                request.getClientAddress().getHostAddress() +
+                                ":" +
+                                request.getClientPort()
+                );
+                close();
+                return;
+            }
+        }
+
         logNewConnection();
     }
 
@@ -381,8 +402,8 @@ public class SubNode extends Thread {
             node +
             ", gui=" +
             node.getGUI() +
-            ", userCreated=" +
-            userCreated +
+            ", outgoingConnection=" +
+            outgoingConnection +
             ", running=" +
             running +
             "]"
@@ -395,7 +416,7 @@ public class SubNode extends Thread {
         if (obj == null || getClass() != obj.getClass()) return false;
         SubNode subNode = (SubNode) obj;
         return (
-            userCreated &&
+            outgoingConnection &&
             this.socket.getPort() == subNode.socket.getPort() &&
             socket.getInetAddress().equals(subNode.getSocket().getInetAddress())
         );
@@ -420,7 +441,7 @@ public class SubNode extends Thread {
 
     @Override
     public int hashCode() {
-        if (userCreated) return Objects.hash(
+        if (outgoingConnection) return Objects.hash(
             socket.getInetAddress(),
             socket.getPort()
         );

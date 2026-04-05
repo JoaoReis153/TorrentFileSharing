@@ -12,18 +12,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.BorderFactory;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
+import javax.swing.*;
 
 import Core.Node;
 import FileSearch.FileSearchResult;
@@ -287,6 +276,34 @@ public class GUI {
             duration
         );
         downloadStats.open();
+    }
+
+    public boolean confirmIncomingConnection(String address, int port) {
+        if (!SHOW) return true;
+
+        final int[] userChoice = new int[] { JOptionPane.NO_OPTION };
+        Runnable promptTask = () -> {
+            userChoice[0] = JOptionPane.showConfirmDialog(
+                    frame,
+                    "Incoming connection from " + address + ":" + port + "\nAccept connection?",
+                    "Incoming Connection",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+        };
+
+        try {
+            if (SwingUtilities.isEventDispatchThread()) {
+                promptTask.run();
+            } else {
+                SwingUtilities.invokeAndWait(promptTask);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to show incoming connection dialog: " + e.getMessage());
+            return false;
+        }
+
+        return userChoice[0] == JOptionPane.YES_OPTION;
     }
 
     public Node getNode() {
