@@ -9,6 +9,7 @@ public class Main {
 
     private static final String PROJECT_DIR = "./Code"; // Replace with actual path
     private static final String DEFAULT_FILE_STRUCTURE = "files"; // Replace with actual path
+    private static final String NODE_FILES_BASE = PROJECT_DIR + "/files/dl";
     private static int id = -1;
 
     public static void main(String[] args) {
@@ -54,7 +55,7 @@ public class Main {
             public void run() {
                 // This block will run before the JVM shuts down
 
-                String dirToRemove = PROJECT_DIR + "/dl" + id;
+                String dirToRemove = NODE_FILES_BASE + id;
                 File dirToRemoveFile = new File(dirToRemove);
               
                 try {
@@ -118,7 +119,7 @@ public class Main {
     }
 
     private static void createDefaultFileStructure(int arg)  {
-        String dirToRemove = PROJECT_DIR + "/dl" + arg;
+        String dirToRemove = NODE_FILES_BASE + arg;
         File removeDir = new File(dirToRemove);
         if (removeDir.exists() && removeDir.isDirectory()) {
             try {
@@ -133,7 +134,7 @@ public class Main {
         File createDir = new File(dirToCreate);
         if (createDir.exists() && createDir.isDirectory()) {
             try {
-                copyDirectory(createDir, new File(PROJECT_DIR + "/dl" + arg));
+                copyDirectory(createDir, new File(NODE_FILES_BASE + arg));
             } catch (IOException e) {
                 System.err.println("Failed to copy files for argument: " + arg);
                 System.exit(1);
@@ -142,7 +143,7 @@ public class Main {
             System.out.println("Argument folder not found in default structure: " + arg);
             
             // Create the directory in the PROJECT_DIR if it doesn't exist
-            File newDir = new File(PROJECT_DIR + "/dl" + arg);
+            File newDir = new File(NODE_FILES_BASE + arg);
             if (!newDir.exists()) {
                 boolean created = newDir.mkdirs(); // Create the directory
                 if (!created) {

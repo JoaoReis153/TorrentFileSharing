@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 
 public class Node {
 
-    public static final String WORK_FOLDER = "Code/dl";
+    public static final String WORK_FOLDER = "Code/files/dl";
     private static final int BASE_PORT = 8080;
     private static final int MAX_PORT = 65535;
 
