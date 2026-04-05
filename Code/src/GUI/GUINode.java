@@ -59,11 +59,18 @@ public class GUINode {
                     String portText = portField.getText();
                     try {
                         int port = Integer.parseInt(portText);
-                        JOptionPane.showMessageDialog(
+
+                        int choice = JOptionPane.showConfirmDialog(
                             frame,
-                            "Address: " + address + "\nPort: " + port
+                            "Connect to:\nAddress: " + address + "\nPort: " + port + "?",
+                            "Confirm Connection",
+                            JOptionPane.YES_NO_OPTION
                         );
-                        node.connectToNode(address, port);
+
+                        if (choice == JOptionPane.YES_OPTION) {
+                            node.connectToNode(address, port);
+                        }
+
                     } catch (NumberFormatException ex) {
                         JOptionPane.showMessageDialog(
                             frame,
