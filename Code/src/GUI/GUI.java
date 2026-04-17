@@ -10,6 +10,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -34,6 +35,8 @@ public class GUI {
     private JFrame frame;
     private JList<FileSearchResult> fileList;
     private DefaultListModel<FileSearchResult> listModel;
+    private JList<String> currentFolderFileList;
+    private DefaultListModel<String> currentFolderFilesModel;
     private ArrayList<FileSearchResult> localFiles = new ArrayList<>();
     private ArrayList<FileSearchResult> allFiles;
     private Node node;
@@ -94,6 +97,7 @@ public class GUI {
         frame.setLocation(x, y);
 
         frame.setVisible(SHOW);
+        refreshCurrentFolderFilesList();
     }
 
     private void addFrameContent() {
@@ -117,7 +121,12 @@ public class GUI {
 
         JPanel leftArea = new JPanel();
         leftArea.setPreferredSize(new Dimension(300, 150));
-        leftArea.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        leftArea.setBorder(
+            BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(Color.BLACK),
+                "Files in the network:"
+            )
+        );
 
         allFiles = new ArrayList<>();
         listModel = new DefaultListModel<>();
@@ -129,6 +138,20 @@ public class GUI {
         JScrollPane scrollPane = new JScrollPane(fileList);
         leftArea.setLayout(new BorderLayout());
         leftArea.add(scrollPane, BorderLayout.CENTER);
+
+        JPanel currentFolderPanel = new JPanel(new BorderLayout());
+        currentFolderPanel.setPreferredSize(new Dimension(240, 150));
+        currentFolderPanel.setBorder(
+            BorderFactory.createTitledBorder("Current Folder Files")
+        );
+
+        currentFolderFilesModel = new DefaultListModel<>();
+        currentFolderFileList = new JList<>(currentFolderFilesModel);
+        currentFolderFileList.setFocusable(false);
+        currentFolderPanel.add(
+            new JScrollPane(currentFolderFileList),
+            BorderLayout.CENTER
+        );
 
         JPanel rightButtonsPanel = new JPanel();
         rightButtonsPanel.setLayout(new GridLayout(2, 1, 10, 10));
@@ -142,6 +165,7 @@ public class GUI {
         rightButtonsPanel.add(downloadButton);
         rightButtonsPanel.add(connectButton);
 
+        bottomPanel.add(currentFolderPanel, BorderLayout.WEST);
         bottomPanel.add(leftArea, BorderLayout.CENTER);
         bottomPanel.add(rightButtonsPanel, BorderLayout.EAST);
 
@@ -254,6 +278,8 @@ public class GUI {
                 };
             }
         }
+
+        refreshCurrentFolderFilesList();
         
         ArrayList<FileSearchResult> aux = new ArrayList<>();
 
@@ -282,6 +308,7 @@ public class GUI {
     }
 
     public void showDownloadStats(byte[] hash, long duration) {
+        refreshCurrentFolderFilesList();
         GUIDownloadStats downloadStats = new GUIDownloadStats(
             GUI.this,
             hash,
@@ -324,6 +351,33 @@ public class GUI {
 
     public boolean getSHOW() {
         return SHOW;
+    }
+
+    private void refreshCurrentFolderFilesList() {
+        File[] files = node.getFolder().listFiles();
+        ArrayList<String> fileNames = new ArrayList<>();
+
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    fileNames.add(file.getName());
+                }
+            }
+        }
+
+        Collections.sort(fileNames, String.CASE_INSENSITIVE_ORDER);
+
+        SwingUtilities.invokeLater(() -> {
+            currentFolderFilesModel.clear();
+            if (fileNames.isEmpty()) {
+                currentFolderFilesModel.addElement("(no files in current folder)");
+                return;
+            }
+
+            for (String fileName : fileNames) {
+                currentFolderFilesModel.addElement(fileName);
+            }
+        });
     }
 
     /*

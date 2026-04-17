@@ -73,6 +73,8 @@ public class DownloadTasksManager extends Thread {
             long start = System.currentTimeMillis();
             processDownload();
             long duration = System.currentTimeMillis() - start;
+            long safeDurationMs = Math.max(1L, duration);
+            long bytesPerSecond = (example.getFileSize() * 1000L) / safeDurationMs;
             node.getGUI().showDownloadStats(example.getHash(), duration);
             System.out.println(
                 node.getAddressAndPortFormated() +
@@ -80,7 +82,7 @@ public class DownloadTasksManager extends Thread {
                 "Download finished for file " +
                 example.getFileName() + 
                 " [" + example.getFileSize() + "] at a rate of " +
-                (example.getFileSize() / duration) +
+                bytesPerSecond +
                 " bytes/s"
             );
             node.removeDownloadProcess(example.getHash());
