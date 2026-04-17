@@ -1,5 +1,6 @@
 package Tests;
 
+import Core.Node;
 import GUI.GUI;
 import java.io.File;
 import java.io.IOException;
@@ -7,9 +8,8 @@ import java.util.Scanner;
 
 public class Main {
 
-    private static final String PROJECT_DIR = "./Code"; // Replace with actual path
-    private static final String DEFAULT_FILE_STRUCTURE = "files"; // Replace with actual path
-    private static final String NODE_FILES_BASE = PROJECT_DIR + "/files/dl";
+    private static final String DEFAULT_FILE_STRUCTURE = "files";
+    private static final String NODE_FILES_BASE = Node.WORK_FOLDER;
     private static int id = -1;
 
     public static void main(String[] args) {
