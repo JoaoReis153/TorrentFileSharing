@@ -3,147 +3,246 @@ package Tests;
 import Core.Node;
 import GUI.GUI;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Scanner;
 
 public class Test {
 
-    ArrayList<Integer> inputs;
-    ArrayList<GUI> guiList;
-    int mode;
+    private static final String DEFAULT_BROADCAST_QUERY = "";
+    private static final long DEFAULT_DELAY_BEFORE_DOWNLOAD_MS = 1000L;
 
-    public Test(HashSet<String> args, int mode) {
-      //Take the inputs and trasnform them into ints
-        this.inputs = new ArrayList<>();
-        for (String arg : args) {
-            try {
-                int id = Integer.parseInt(arg);
-                inputs.add(id);
-            } catch (NumberFormatException e) {
-                System.err.println(
-                    "Invalid ID: " +
-                    arg +
-                    ". Please provide numeric values."
-                );
-            } catch (IllegalArgumentException e) {
-                System.err.println(
-                    "Failed to create node: " + e.getMessage()
-                );
-            } catch (Exception e) {
-                System.err.println(
-                    "An error occurred while creating the node with ID: " +
-                    arg
-                );
-            }
-          }
+    private final List<Integer> inputs;
+    private final int mode;
+    private final List<GUI> guiList;
 
+    private enum SearchTarget {
+        NONE,
+        FIRST,
+        ALL,
+    }
+
+    private enum DownloadTarget {
+        NONE,
+        LAST,
+        ALL,
+    }
+
+    private static final class TestScenario {
+
+        private final int mode;
+        private final String description;
+        private final boolean requiresConnections;
+        private final SearchTarget searchTarget;
+        private final DownloadTarget downloadTarget;
+        private final long preDownloadDelayMs;
+
+        private TestScenario(
+            int mode,
+            String description,
+            boolean requiresConnections,
+            SearchTarget searchTarget,
+            DownloadTarget downloadTarget,
+            long preDownloadDelayMs
+        ) {
+            this.mode = mode;
+            this.description = description;
+            this.requiresConnections = requiresConnections;
+            this.searchTarget = searchTarget;
+            this.downloadTarget = downloadTarget;
+            this.preDownloadDelayMs = preDownloadDelayMs;
+        }
+    }
+
+    private static final Map<Integer, TestScenario> SCENARIOS = buildScenarios();
+
+    private static Map<Integer, TestScenario> buildScenarios() {
+        Map<Integer, TestScenario> scenarios = new HashMap<>();
+
+        scenarios.put(
+            0,
+            new TestScenario(
+                0,
+                "Create nodes only",
+                false,
+                SearchTarget.NONE,
+                DownloadTarget.NONE,
+                0
+            )
+        );
+
+        scenarios.put(
+            1,
+            new TestScenario(
+                1,
+                "Create a network of nodes and connect them",
+                true,
+                SearchTarget.NONE,
+                DownloadTarget.NONE,
+                0
+            )
+        );
+
+        scenarios.put(
+            2,
+            new TestScenario(
+                2,
+                "Create a network, connect nodes, and search in the first node",
+                true,
+                SearchTarget.FIRST,
+                DownloadTarget.NONE,
+                0
+            )
+        );
+
+        scenarios.put(
+            3,
+            new TestScenario(
+                3,
+                "Create a network, connect nodes, and search in all nodes",
+                true,
+                SearchTarget.ALL,
+                DownloadTarget.NONE,
+                0
+            )
+        );
+
+        scenarios.put(
+            4,
+            new TestScenario(
+                4,
+                "Create a network, connect nodes, and download files in the last node",
+                true,
+                SearchTarget.ALL,
+                DownloadTarget.LAST,
+                0
+            )
+        );
+
+        scenarios.put(
+            5,
+            new TestScenario(
+                5,
+                "Create a network, connect nodes, and download files in every node",
+                true,
+                SearchTarget.ALL,
+                DownloadTarget.ALL,
+                DEFAULT_DELAY_BEFORE_DOWNLOAD_MS
+            )
+        );
+
+        return scenarios;
+    }
+
+    public Test(Set<String> args, int mode) {
+        this.inputs = parseInputs(args);
         this.mode = mode;
+        this.guiList = new ArrayList<>();
     }
 
     public void run() {
+        TestScenario scenario = SCENARIOS.get(mode);
+        if (scenario == null) {
+            System.out.println("Invalid mode.");
+            return;
+        }
 
-        initializeNodes(true);
+        initializeNodes();
 
         if (guiList.isEmpty()) {
             System.out.println("No nodes created. Exiting test.");
             return;
         }
 
-        switch (mode) {
-            case 1 -> test1();
-            case 2 -> test2();
-            case 3 -> test3();
-            case 4 -> test4();
-            case 5 -> test5();
-            default -> System.out.println("Invalid mode.");
+        executeScenario(scenario);
+    }
+
+    private static List<Integer> parseInputs(Set<String> args) {
+        List<Integer> parsed = new ArrayList<>();
+        for (String arg : args) {
+            try {
+                parsed.add(Integer.parseInt(arg));
+            } catch (NumberFormatException e) {
+                System.err.println(
+                    "Invalid ID: " + arg + ". Please provide numeric values."
+                );
+            }
+        }
+
+        Collections.sort(parsed);
+        return parsed;
+    }
+
+    private void executeScenario(TestScenario scenario) {
+        System.out.println("Test " + scenario.mode + ": " + scenario.description);
+
+        if (scenario.requiresConnections) {
+            connectNodes();
+        }
+
+        runSearchIfNeeded(scenario.searchTarget);
+        runDownloadIfNeeded(scenario.downloadTarget, scenario.preDownloadDelayMs);
+    }
+
+    private void runSearchIfNeeded(SearchTarget target) {
+        switch (target) {
+            case NONE -> {
+                return;
+            }
+            case FIRST -> {
+                List<GUI> firstNodeOnly = new ArrayList<>();
+                firstNodeOnly.add(guiList.get(0));
+                broadcastSearchMessage(firstNodeOnly, DEFAULT_BROADCAST_QUERY);
+            }
+            case ALL -> broadcastSearchMessage(guiList, DEFAULT_BROADCAST_QUERY);
         }
     }
 
-      public void test1() {
-        // Test 1: Create a network of nodes and connect them
-        System.out.println(
-            "Test 1: Create a network of nodes and connect them"
-        );
+    private void runDownloadIfNeeded(DownloadTarget target, long delayMs) {
+        if (target == DownloadTarget.NONE) {
+            return;
+        }
 
-        // Establish connections between all nodes
-        connectNodes();
-      } 
+        sleepIfNeeded(delayMs);
 
-      public void test2() {
-        // Test 2: Create a network of nodes, connect them, and search messages
-        System.out.println(
-            "Test 2: Create a network of nodes, connect them, and search in the first node"
-        );
-
-        connectNodes();
-
-        ArrayList<GUI> secondGuiList = new ArrayList<>();
-        secondGuiList.add(guiList.get(0));
-        broadcastSearchMessage(secondGuiList, "");
-    }
-
-      public void test3() {
-        // Test 2: Create a network of nodes, connect them, and search messages
-        System.out.println(
-            "Test 3: Create a network of nodes, connect them, and search in all nodes"
-        );
-
-        connectNodes();
-
-        broadcastSearchMessage(guiList, "");
-    }
-
-      public void test4() {
-        // Test 4: Create a network of nodes, connect them, and download files in the last node
-        System.out.println(
-            "Test 4: Create a network of nodes, connect them, and download files"
-        );
-
-        connectNodes();
-
-        broadcastSearchMessage(guiList, "");
-
-        // Simulate a download operation
-        if (!guiList.isEmpty()) {
-            try {
-                GUI lastGui = guiList.get(guiList.size() - 1);
-                lastGui.simulateDownloadButton(lastGui.getListModel());
-            } catch (Exception e) {
-                System.err.println("Failed to simulate download.");
-                e.printStackTrace();
+        switch (target) {
+            case LAST -> runDownload(guiList.get(guiList.size() - 1));
+            case ALL -> {
+                for (GUI gui : guiList) {
+                    runDownload(gui);
+                }
+            }
+            case NONE -> {
+                return;
             }
         }
     }
 
-      public void test5() {
-        // Test 3: Create a network of nodes, connect them, and download files
-        System.out.println(
-            "Test 5: Create a network of nodes, connect them, and download files"
-        );
-
-        connectNodes();
-
-        broadcastSearchMessage(guiList, "");
-
+    private void runDownload(GUI gui) {
         try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
+            gui.simulateDownloadButton(gui.getListModel());
+        } catch (Exception e) {
+            System.err.println("Failed to simulate download.");
             e.printStackTrace();
         }
-
-        // Simulate a download operation
-        if (!guiList.isEmpty()) {
-            try {
-                for (GUI gui : guiList) {
-                    gui.simulateDownloadButton(gui.getListModel());
-                }
-            } catch (Exception e) {
-                System.err.println("Failed to simulate download.");
-                e.printStackTrace();
-            }
-        }
     }
 
+    private void sleepIfNeeded(long delayMs) {
+        if (delayMs <= 0) {
+            return;
+        }
+
+        try {
+            Thread.sleep(delayMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            System.err.println("Interrupted while waiting before downloads.");
+        }
+    }
 
     /**
      * Initializes nodes based on the provided arguments.
@@ -151,9 +250,7 @@ public class Test {
      * @param inputs Command-line arguments containing node IDs
      * @return List of GUI objects for the created nodes
      */
-    private void initializeNodes(boolean show) {
-        this.guiList = new ArrayList<>();
-
+    private void initializeNodes() {
         if (inputs.size() == 0) {
             System.out.println(
                 "Usage: Please provide at least one ID as arguments."
@@ -163,7 +260,7 @@ public class Test {
 
         for (int id : inputs) {
             try {
-                GUI gui = new GUI(id, show);
+                GUI gui = new GUI(id, true);
                 guiList.add(gui);
                 gui.open();
             } catch (NumberFormatException e) {
@@ -211,10 +308,7 @@ public class Test {
      * @param guiList List of GUI objects representing the nodes
      */
 
-    private static void broadcastSearchMessage(
-        ArrayList<GUI> guiList,
-        String broadcastString
-    ) {
+    private static void broadcastSearchMessage(List<GUI> guiList, String broadcastString) {
         for (GUI gui : guiList) {
             gui.getNode().broadcastWordSearchMessageRequest(broadcastString);
         }
@@ -224,7 +318,7 @@ public class Test {
      public static void main(String[] args) {
         
         Scanner scanner = new Scanner(System.in);
-        HashSet<String> nodeIds = new HashSet<>();
+          HashSet<String> nodeIds = new HashSet<>();
 
         // Read the node IDs from user input
         System.out.println("Enter the node IDs (separated by spaces): ");
@@ -253,11 +347,12 @@ public class Test {
         */
 
         System.out.println("Choose the test mode:");
-        System.out.println("1 - Create a network of nodes and connect them");
-        System.out.println("2 - Create a network, connect nodes, and search in the first node");
-        System.out.println("3 - Create a network, connect nodes, and search in all nodes");
-        System.out.println("4 - Create a network, connect nodes, and download files in the last node");
-        System.out.println("5 - Create a network, connect nodes, and download files in every node (Be careful with the temperature of the computer)");
+        for (int i = 0; i <= 5; i++) {
+            TestScenario scenario = SCENARIOS.get(i);
+            if (scenario != null) {
+                System.out.println(i + " - " + scenario.description);
+            }
+        }
         System.out.print("Enter the test number: ");
         
         // Read the test mode interactively from user input
