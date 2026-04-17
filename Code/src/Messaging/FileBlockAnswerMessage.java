@@ -2,9 +2,8 @@ package Messaging;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.nio.file.Files;
-import java.util.Arrays;
 
 public class FileBlockAnswerMessage implements Serializable {
 
@@ -37,18 +36,16 @@ public class FileBlockAnswerMessage implements Serializable {
     }
 
     private void loadDataFromFile() {
-        try {
-            byte[] fileContents = Files.readAllBytes(file.toPath());
-
-            if (offset < 0 || offset + length > fileContents.length) {
+        try (RandomAccessFile raf = new RandomAccessFile(file, "r")) {
+            long fileSize = raf.length();
+            if (offset < 0 || length <= 0 || offset + length > fileSize) {
                 throw new IllegalArgumentException("Invalid offset or length");
             }
 
-            this.data = Arrays.copyOfRange(
-                fileContents,
-                (int) offset,
-                (int) (offset + length)
-            );
+            byte[] blockData = new byte[length];
+            raf.seek(offset);
+            raf.readFully(blockData);
+            this.data = blockData;
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
             this.data = new byte[0];
