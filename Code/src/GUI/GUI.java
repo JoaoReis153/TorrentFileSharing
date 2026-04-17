@@ -10,8 +10,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
@@ -43,9 +46,11 @@ public class GUI {
     private boolean SHOW = true;
     private boolean isOpen = false;
     private String lastSearchKeyword = "";
+    private final Map<String, GUIDownloadProgress> activeDownloadProgress;
 
     public GUI(int nodeId) {
         this.node = new Node(nodeId, this);
+        this.activeDownloadProgress = new HashMap<>();
 
         createGUI();
     }
@@ -53,6 +58,7 @@ public class GUI {
 
     public GUI(int nodeId, boolean show) {
         this.node = new Node(nodeId, this);
+        this.activeDownloadProgress = new HashMap<>();
 
         createGUI();
         this.SHOW = show;
@@ -307,14 +313,44 @@ public class GUI {
         return list;
     }
 
-    public void showDownloadStats(byte[] hash, long duration) {
-        refreshCurrentFolderFilesList();
-        GUIDownloadStats downloadStats = new GUIDownloadStats(
-            GUI.this,
-            hash,
-            duration
+    public synchronized void startDownloadProgress(
+        byte[] hash,
+        String fileName,
+        int totalBlocks
+    ) {
+        String hashKey = hashKey(hash);
+        GUIDownloadProgress progressWindow = new GUIDownloadProgress(
+            this,
+            fileName,
+            totalBlocks
         );
-        downloadStats.open();
+        activeDownloadProgress.put(hashKey, progressWindow);
+        progressWindow.open();
+    }
+
+    public synchronized void updateDownloadProgress(byte[] hash, int completedBlocks) {
+        GUIDownloadProgress progressWindow = activeDownloadProgress.get(hashKey(hash));
+        if (progressWindow != null) {
+            progressWindow.updateProgress(completedBlocks);
+        }
+    }
+
+    public synchronized void finishDownloadProgress(byte[] hash) {
+        GUIDownloadProgress progressWindow = activeDownloadProgress.remove(hashKey(hash));
+        if (progressWindow != null) {
+            progressWindow.close();
+        }
+    }
+
+    public synchronized void completeDownloadProgress(
+        byte[] hash,
+        long durationInMiliseconds,
+        Map<String, Integer> nodesNBlocks
+    ) {
+        GUIDownloadProgress progressWindow = activeDownloadProgress.remove(hashKey(hash));
+        if (progressWindow != null) {
+            progressWindow.finish(durationInMiliseconds, nodesNBlocks);
+        }
     }
 
     public boolean confirmIncomingConnection(String address, int port) {
@@ -392,5 +428,9 @@ public class GUI {
             }
         }
         return count;
+    }
+
+    private String hashKey(byte[] hash) {
+        return Arrays.toString(hash);
     }
 }

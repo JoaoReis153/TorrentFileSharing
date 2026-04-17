@@ -4,7 +4,6 @@ import Core.Node;
 import FileSearch.FileSearchResult;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
-import java.awt.desktop.SystemEventListener;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -30,6 +29,8 @@ public class DownloadTasksManager extends Thread {
     private Set<FileBlockAnswerMessage> answerList;
     private Map<String, Integer> numberOfDownloadsForPeer;
     private ArrayList<SubNode> peersWithFile;
+    private int totalBlocks;
+    private int completedBlocks;
     private int runningAssistants;
     private boolean running = true;
 
@@ -50,6 +51,8 @@ public class DownloadTasksManager extends Thread {
             example.getHash(),
             example.getFileSize()
         );
+        this.totalBlocks = requestList.size();
+        this.completedBlocks = 0;
         this.peersWithFile = getNodesWithFile();
 
         //In case there are no nodes with the file, return
@@ -70,12 +73,27 @@ public class DownloadTasksManager extends Thread {
     @Override
     public void run() {
         try {
+            node
+                .getGUI()
+                .startDownloadProgress(
+                    example.getHash(),
+                    example.getFileName(),
+                    totalBlocks
+                );
+
             long start = System.currentTimeMillis();
             processDownload();
             long duration = System.currentTimeMillis() - start;
             long safeDurationMs = Math.max(1L, duration);
             long bytesPerSecond = (example.getFileSize() * 1000L) / safeDurationMs;
-            node.getGUI().showDownloadStats(example.getHash(), duration);
+
+            node
+                .getGUI()
+                .completeDownloadProgress(
+                    example.getHash(),
+                    duration,
+                    new HashMap<>(numberOfDownloadsForPeer)
+                );
             System.out.println(
                 node.getAddressAndPortFormated() +
                 "[taskmanager]" +
@@ -88,6 +106,7 @@ public class DownloadTasksManager extends Thread {
             node.removeDownloadProcess(example.getHash());
             node.getGUI().reloadListModel();
         } catch (Exception e) {
+            node.getGUI().finishDownloadProgress(example.getHash());
             System.out.println(node.getAddressAndPortFormated() + "Error in DownloadTasksManager");
             e.printStackTrace();
             System.exit(1);
@@ -200,7 +219,11 @@ public class DownloadTasksManager extends Thread {
     public synchronized void addDownloadAnswer(FileBlockAnswerMessage answer) {
         if (!answerList.contains(answer)) {
             answerList.add(answer);
+            completedBlocks++;
             latch.countDown();
+            node
+                .getGUI()
+                .updateDownloadProgress(example.getHash(), completedBlocks);
             notify();
         }
     }
