@@ -188,6 +188,7 @@ public class DownloadTasksManager extends Thread {
         FileBlockRequestMessage request
     ) {
         requestList.add(request);
+        notifyAll();
     }
 
     public Map<String, Integer> getDownloadProcess() {

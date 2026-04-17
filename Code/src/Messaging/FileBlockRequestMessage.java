@@ -2,20 +2,20 @@ package Messaging;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class FileBlockRequestMessage implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private int hash;
+    private byte[] hash;
     private long offset;
     private int length;
     private String senderAddress;
     private int senderPort = 0; 
 
-    public FileBlockRequestMessage(int hash, long offset, int length) {
+    public FileBlockRequestMessage(byte[] hash, long offset, int length) {
         this.hash = hash;
         this.offset = offset;
         this.length = length;
@@ -29,7 +29,7 @@ public class FileBlockRequestMessage implements Serializable {
     public void setSenderPort(int senderPort) {
         this.senderPort = senderPort;
     }   
-    public int getHash() {
+    public byte[] getHash() {
         return hash;
     }
 
@@ -55,13 +55,18 @@ public class FileBlockRequestMessage implements Serializable {
         if (o == null || getClass() != o.getClass()) return false;
         FileBlockRequestMessage that = (FileBlockRequestMessage) o;
         return (
-            hash == that.hash && offset == that.offset && length == that.length
+            Arrays.equals(hash, that.hash) &&
+            offset == that.offset &&
+            length == that.length
         );
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(hash, offset, length);
+        int result = Arrays.hashCode(hash);
+        result = 31 * result + Long.hashCode(offset);
+        result = 31 * result + Integer.hashCode(length);
+        return result;
     }
 
     public String toString() {
@@ -85,7 +90,7 @@ public class FileBlockRequestMessage implements Serializable {
  
     // A method that has already the blockSize defined
     public static List<FileBlockRequestMessage> createBlockList(
-        int hash,
+        byte[] hash,
         long fileSize
     ) {
         return createBlockList(hash, fileSize, 10240);
@@ -106,7 +111,7 @@ public class FileBlockRequestMessage implements Serializable {
      * file block request messages with the size of the file     
      */ 
     public static List<FileBlockRequestMessage> createBlockList(
-        int hash,
+        byte[] hash,
         long fileSize,
         int blockSize
     ) {

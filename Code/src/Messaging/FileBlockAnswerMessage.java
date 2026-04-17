@@ -10,7 +10,7 @@ public class FileBlockAnswerMessage implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private final int nodeId;
-    private final int hash;
+    private final byte[] hash;
     private final long offset;
     private final int length;
     private int senderPort;
@@ -58,7 +58,7 @@ public class FileBlockAnswerMessage implements Serializable {
         }
     }
 
-    public int getHash() {
+    public byte[] getHash() {
         return hash;
     }
 

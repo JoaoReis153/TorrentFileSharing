@@ -12,9 +12,11 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,12 +34,12 @@ public class Node {
     private final InetAddress address;
     private final File folder;
     private final Set<SubNode> peers;
-    private final HashMap<Integer, DownloadTasksManager> downloadManagers;
+    private final HashMap<String, DownloadTasksManager> downloadManagers;
     private final GUI gui;
     private ArrayList<FileBlockRequestMessage> blocksToProcess;
     private ExecutorService senders;
     private final int numberOfSenders = 5;
-    private HashMap<String, Integer> hashes;
+    private HashMap<String, byte[]> hashes;
 
     private final ExecutorService downloadTaskManagersThreadPool =
         Executors.newFixedThreadPool(10);
@@ -157,14 +159,14 @@ public class Node {
         FileBlockRequestMessage request
     ) {
         blocksToProcess.add(request);
-        notify();
+        notifyAll();
     }
 
     // Remove a request from the list of requests to process
     public synchronized void removeElementFromBlocksToProcess(
         FileBlockRequestMessage request
     ) throws InterruptedException {
-        if (blocksToProcess.isEmpty()) wait();
+        while (blocksToProcess.isEmpty()) wait();
         blocksToProcess.remove(request);
     }
 
@@ -313,7 +315,8 @@ public class Node {
     public void downloadFiles(List<List<FileSearchResult>> filesToDownload) {
         for (List<FileSearchResult> file : filesToDownload) {
             //Check if it's already downloading the file
-            if (downloadManagers.containsKey(file.get(0).getHash())) continue;
+            String hashKey = hashKey(file.get(0).getHash());
+            if (downloadManagers.containsKey(hashKey)) continue;
 
             // Check if already has the file in the directory
             if (hasFileWithHash(file.get(0).getHash())) continue;
@@ -326,7 +329,7 @@ public class Node {
                 file
             );
             downloadTaskManagersThreadPool.execute(downloadManager);
-            downloadManagers.put(example.getHash(), downloadManager);
+            downloadManagers.put(hashKey, downloadManager);
         }
     }
 
@@ -339,12 +342,21 @@ public class Node {
         if (folder == null || !folder.exists() || !folder.isDirectory()) return;
 
         File[] files = folder.listFiles();
+        if (files == null) return;
 
         for (File file : files) {
-            hashes.put(
-                file.getAbsolutePath(),
-                Utils.calculateFileHash(file.getAbsolutePath())
-            );
+            try {
+                hashes.put(
+                    file.getAbsolutePath(),
+                    Utils.calculateFileHash(file.getAbsolutePath())
+                );
+            } catch (RuntimeException e) {
+                System.err.println(
+                    getAddressAndPortFormated() +
+                    " Failed to load hash for file: " +
+                    file.getAbsolutePath()
+                );
+            }
         }
     }
 
@@ -355,7 +367,6 @@ public class Node {
      */
     public synchronized void checkMissingFiles() {
         File[] files = folder.listFiles();
-        Set<String> filesPaths = hashes.keySet();
 
         // Create a set of existing file paths
         Set<String> existingFilePaths = new HashSet<>();
@@ -365,10 +376,12 @@ public class Node {
             }
         }
 
-        // Check for missing paths
-        for (String path : filesPaths) {
-            if (!existingFilePaths.contains(path)) {
-                hashes.remove(path);
+        // Remove entries for files that no longer exist in the directory.
+        Iterator<Map.Entry<String, byte[]>> iterator = hashes.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, byte[]> entry = iterator.next();
+            if (!existingFilePaths.contains(entry.getKey())) {
+                iterator.remove();
             }
         }
     }
@@ -377,19 +390,30 @@ public class Node {
      * Returns the hash of a file
      * If the hash is not in the hash map, it calculates the hash and adds it to the map
      */
-    public int getHash(String filePath) {
+    public byte[] getHash(String filePath) {
         checkMissingFiles();
         if (hashes.containsKey(filePath)) {
             return hashes.get(filePath);
         } else {
-            return Utils.calculateFileHash(filePath);
+            try {
+                byte[] hash = Utils.calculateFileHash(filePath);
+                hashes.put(filePath, hash);
+                return hash;
+            } catch (RuntimeException e) {
+                System.err.println(
+                    getAddressAndPortFormated() +
+                    " Failed to calculate hash for file: " +
+                    filePath
+                );
+                return null;
+            }
         }
     }
 
     /*
      * Checks if a file with a given hash exists in the working directory
      */
-    public boolean hasFileWithHash(int hash) {
+    public boolean hasFileWithHash(byte[] hash) {
         if (folder == null || !folder.exists() || !folder.isDirectory()) {
             return false;
         }
@@ -397,9 +421,9 @@ public class Node {
         File[] files = folder.listFiles();
 
         for (File file : files) {
-            Integer fileHash = hashes.get(file.getAbsolutePath());
+            byte[] fileHash = hashes.get(file.getAbsolutePath());
 
-            if (fileHash != null && fileHash.equals(hash)) {
+            if (fileHash != null && Arrays.equals(fileHash, hash)) {
                 return true;
             }
         }
@@ -410,27 +434,24 @@ public class Node {
     // Returns the first request in the list of requests to process
     public synchronized FileBlockRequestMessage getBlockRequest()
         throws InterruptedException {
-        if (blocksToProcess.isEmpty()) wait();
-        try {
-            return blocksToProcess.remove(0);
-        } catch (Exception e) {}
-        return null;
+        while (blocksToProcess.isEmpty()) wait();
+        return blocksToProcess.remove(0);
     }
 
     // Add a new request to the list of requests to process
     public synchronized void addBlockRequest(FileBlockRequestMessage request) {
         blocksToProcess.add(request);
-        notify();
+        notifyAll();
     }
 
     // Remove a request from the list of requests to process
-    public void removeDownloadProcess(int hash) {
-        downloadManagers.remove(hash);
+    public void removeDownloadProcess(byte[] hash) {
+        downloadManagers.remove(hashKey(hash));
     }
 
     // Returns the download process of a file
-    public Map<String, Integer> getDownloadProcess(int hash) {
-        return downloadManagers.get(hash).getDownloadProcess();
+    public Map<String, Integer> getDownloadProcess(byte[] hash) {
+        return downloadManagers.get(hashKey(hash)).getDownloadProcess();
     }
 
     /*
@@ -439,15 +460,15 @@ public class Node {
      * to know how many answers has each peer sent
      */
     public void addDownloadAnswer(
-        int hash,
+        byte[] hash,
         InetAddress address,
         int port,
         FileBlockAnswerMessage answer
     ) {
-        if (downloadManagers.get(hash) == null) return;
-        downloadManagers.get(hash).addDownloadAnswer(answer);
-        downloadManagers
-            .get(hash)
+        DownloadTasksManager downloadManager = downloadManagers.get(hashKey(hash));
+        if (downloadManager == null) return;
+        downloadManager.addDownloadAnswer(answer);
+        downloadManager
             .addNumberOfDownloadsForPeer(
                 address.getHostAddress() + ":" + port,
                 1
@@ -504,5 +525,9 @@ public class Node {
     @Override
     public String toString() {
         return "Node " + address + " " + port;
+    }
+
+    private String hashKey(byte[] hash) {
+        return Arrays.toString(hash);
     }
 }

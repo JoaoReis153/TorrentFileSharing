@@ -4,6 +4,7 @@ import Core.Node;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import java.io.File;
+import java.util.Arrays;
 
 public class SenderAssistant extends Thread {
 
@@ -63,7 +64,8 @@ public class SenderAssistant extends Thread {
      * If the file block is not found, it returns null.
      */ 
     public FileBlockAnswerMessage fillRequest(FileBlockRequestMessage request) {            
-        int hash = request.getHash();
+        byte[] hash = request.getHash();
+        if (hash == null) return null;
         File file = findFileByHash(hash);
         if (file == null) return null;
         return new FileBlockAnswerMessage(
@@ -84,7 +86,7 @@ public class SenderAssistant extends Thread {
      * 
      * If the file is not found, it returns null.
      */ 
-    private synchronized File findFileByHash(int hash) {
+    private synchronized File findFileByHash(byte[] hash) {
         File folder = new File(Node.WORK_FOLDER + node.getId() + "/");
         if (!folder.isDirectory()) {
             throw new IllegalArgumentException(
@@ -101,7 +103,8 @@ public class SenderAssistant extends Thread {
 
         for (File file : files) {
             if (file.isFile()) {
-                if (node.getHash(file.getAbsolutePath()) == hash) {
+                byte[] fileHash = node.getHash(file.getAbsolutePath());
+                if (fileHash != null && Arrays.equals(fileHash, hash)) {
                     return file;
                 }
             }

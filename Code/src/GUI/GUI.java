@@ -12,7 +12,19 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 
 import Core.Node;
 import FileSearch.FileSearchResult;
@@ -269,7 +281,7 @@ public class GUI {
         return list;
     }
 
-    public void showDownloadStats(int hash, long duration) {
+    public void showDownloadStats(byte[] hash, long duration) {
         GUIDownloadStats downloadStats = new GUIDownloadStats(
             GUI.this,
             hash,
@@ -284,11 +296,11 @@ public class GUI {
         final int[] userChoice = new int[] { JOptionPane.NO_OPTION };
         Runnable promptTask = () -> {
             userChoice[0] = JOptionPane.showConfirmDialog(
-                    frame,
-                    "Incoming connection from " + address + ":" + port + "\nAccept connection?",
-                    "Incoming Connection",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                frame,
+                "Incoming connection from " + address + ":" + port + "\nAccept connection?",
+                "Incoming Connection",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
             );
         };
 

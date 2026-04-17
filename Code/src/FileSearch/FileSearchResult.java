@@ -4,7 +4,7 @@ import Core.Node;
 import java.io.File;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.Objects;
+import java.util.Arrays;
 
 public class FileSearchResult
     implements Serializable, Comparable<FileSearchResult> {
@@ -12,7 +12,7 @@ public class FileSearchResult
     private WordSearchMessage searchMessage;
     private static final long serialVersionUID = 1L;
     private String fileName;
-    private int hash;
+    private byte[] hash;
     private long fileSize;
     private InetAddress address;
     private int port;
@@ -21,7 +21,7 @@ public class FileSearchResult
     public FileSearchResult(
         WordSearchMessage searchMessage,
         String fileName,
-        int hash,
+        byte[] hash,
         long fileSize,
         InetAddress address,
         int port
@@ -51,7 +51,7 @@ public class FileSearchResult
         return fileName;
     }
 
-    public int getHash() {
+    public byte[] getHash() {
         return hash;
     }
 
@@ -87,12 +87,12 @@ public class FileSearchResult
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FileSearchResult that = (FileSearchResult) o;
-        return hash == that.hash;
+        return Arrays.equals(hash, that.hash);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(hash);
+        return Arrays.hashCode(hash);
     }
 
     @Override

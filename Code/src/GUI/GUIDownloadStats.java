@@ -13,9 +13,9 @@ public class GUIDownloadStats {
     private Map<String, Integer> nodesNBlocks;
     private Long durationInMiliseconds;
     private GUI gui;
-    private int hash;
+    private byte[] hash;
 
-    public GUIDownloadStats(GUI gui, int hash, long durationInMiliseconds) {
+    public GUIDownloadStats(GUI gui, byte[] hash, long durationInMiliseconds) {
         this.gui = gui;
         this.hash = hash;
         this.durationInMiliseconds = durationInMiliseconds;

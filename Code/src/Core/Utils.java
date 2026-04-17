@@ -1,6 +1,5 @@
 package Core;
 
-import java.math.BigInteger;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -14,23 +13,19 @@ public class Utils {
      * Calculates the hash of a file
      * The hash is calculated using the SHA-256 algorithm   
      */
-    public static int calculateFileHash(String filePath) {
+    public static byte[] calculateFileHash(String filePath) {
         try {
             byte[] fileContents = java.nio.file.Files.readAllBytes(
                 java.nio.file.Paths.get(filePath)
             );
 
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(
-                fileContents
-            );
+            return MessageDigest.getInstance("SHA-256").digest(fileContents);
 
-            return new BigInteger(1, hash).intValue();
-        } catch (OutOfMemoryError e) {
-            System.out.println("Is too big (that's what she said) ");
-            return 0;
         } catch (Exception e) {
-            System.out.println("Error calculating file hash");
-            return 0;
+            throw new IllegalStateException(
+                "Failed to calculate file hash for: " + filePath,
+                e
+            );
         }
     }
 

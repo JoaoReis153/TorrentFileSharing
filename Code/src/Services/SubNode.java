@@ -541,7 +541,10 @@ public class SubNode extends Thread {
 
         for (File file : files) {
             if (isFileMatch(file, keyword, filesToIgnore)) {
-                int hash = node.getHash(file.getAbsolutePath());
+                byte[] hash = node.getHash(file.getAbsolutePath());
+                if (hash == null) {
+                    continue;
+                }
                 results[counter++] = new FileSearchResult(
                     searchMessage,
                     file.getName(),
@@ -552,7 +555,15 @@ public class SubNode extends Thread {
                 );
             }
         }
-        return results;
+        if (counter == results.length) {
+            return results;
+        }
+
+        FileSearchResult[] trimmedResults = new FileSearchResult[counter];
+        for (int i = 0; i < counter; i++) {
+            trimmedResults[i] = results[i];
+        }
+        return trimmedResults;
     }
 
     public void sendFileBlockAnswer(FileBlockAnswerMessage answer) {
