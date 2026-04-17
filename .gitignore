@@ -53,3 +53,5 @@ ajcore.*
 *.war
 *.ear
 
+# Ignore the run_project.sh-e file
+run_project.sh-e
