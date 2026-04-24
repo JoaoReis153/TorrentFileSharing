@@ -1,13 +1,28 @@
 package Messaging;
 
-import java.io.Serializable;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class FileBlockRequestMessage implements Serializable {
+/**
+ * Request for a specific block of a file.
+ *
+ * Wire layout:
+ *   [byte[]: hash]
+ *   [long: offset]
+ *   [int: length]
+ *   [String: senderAddress]
+ *   [int: senderPort]
+ */
+public class FileBlockRequestMessage {
 
-    private static final long serialVersionUID = 1L;
+    public static final byte TYPE_ID = 4;
+
     private static final int DEFAULT_TARGET_BLOCK_COUNT = 64;
     private static final int MIN_BLOCK_SIZE = 1024;
     private static final int MAX_BLOCK_SIZE = 1024 * 1024;
@@ -16,14 +31,51 @@ public class FileBlockRequestMessage implements Serializable {
     private long offset;
     private int length;
     private String senderAddress;
-    private int senderPort = 0; 
+    private int senderPort = 0;
 
     public FileBlockRequestMessage(byte[] hash, long offset, int length) {
         this.hash = hash;
         this.offset = offset;
         this.length = length;
     }
-  
+
+    // ── Serialization ─────────────────────────────────────────────────────────
+
+    public void writeToStream(DataOutputStream dos) throws IOException {
+        BinaryProtocol.writeBytes(dos, hash);
+        dos.writeLong(offset);
+        dos.writeInt(length);
+        BinaryProtocol.writeString(dos, senderAddress);
+        dos.writeInt(senderPort);
+    }
+
+    public static FileBlockRequestMessage readFromStream(DataInputStream dis) throws IOException {
+        byte[] hash = BinaryProtocol.readBytes(dis);
+        long offset = dis.readLong();
+        int length = dis.readInt();
+        String senderAddress = BinaryProtocol.readString(dis);
+        int senderPort = dis.readInt();
+
+        FileBlockRequestMessage msg = new FileBlockRequestMessage(hash, offset, length);
+        msg.setSenderAddress(senderAddress);
+        msg.setSenderPort(senderPort);
+        return msg;
+    }
+
+    public byte[] toBytes() throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        writeToStream(dos);
+        dos.flush();
+        return baos.toByteArray();
+    }
+
+    public static FileBlockRequestMessage fromBytes(byte[] bytes) throws IOException {
+        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+        return readFromStream(dis);
+    }
+
+    // ── Getters/Setters ───────────────────────────────────────────────────────
 
     public void setSenderAddress(String senderAddress) {
         this.senderAddress = senderAddress;
@@ -31,7 +83,8 @@ public class FileBlockRequestMessage implements Serializable {
 
     public void setSenderPort(int senderPort) {
         this.senderPort = senderPort;
-    }   
+    }
+
     public byte[] getHash() {
         return hash;
     }
@@ -43,11 +96,11 @@ public class FileBlockRequestMessage implements Serializable {
     public int getLength() {
         return length;
     }
-    
+
     public String getSenderAddress() {
         return senderAddress;
-    }   
-    
+    }
+
     public int getSenderPort() {
         return senderPort;
     }
@@ -72,12 +125,13 @@ public class FileBlockRequestMessage implements Serializable {
         return result;
     }
 
+    @Override
     public String toString() {
-        String hashString = String.valueOf(hash);
-        int length = hashString.length();
+        String hashString = Arrays.toString(hash);
+        int hashLen = hashString.length();
 
-        String hashDisplay = length > 10
-            ? hashString.substring(length - 10)
+        String hashDisplay = hashLen > 10
+            ? hashString.substring(hashLen - 10)
             : hashString;
 
         return (
@@ -90,7 +144,7 @@ public class FileBlockRequestMessage implements Serializable {
             "]"
         );
     }
- 
+
     public static List<FileBlockRequestMessage> createBlockList(
         byte[] hash,
         long fileSize
@@ -113,20 +167,6 @@ public class FileBlockRequestMessage implements Serializable {
         return (int) boundedBlockSize;
     }
 
-    /*
-     * Creates a list of file block request messages
-     * 
-     * It takes a hash, the size of the file and the block size
-     * 
-     * It creates a list of file block request messages with the size of the file
-     * divided by the block size.
-     * 
-     * If the file size is not divisible by the block size, it creates a list of
-     * file block request messages with the size of the file plus one
-     * 
-     * If the file size is divisible by the block size, it creates a list of
-     * file block request messages with the size of the file     
-     */ 
     public static List<FileBlockRequestMessage> createBlockList(
         byte[] hash,
         long fileSize,

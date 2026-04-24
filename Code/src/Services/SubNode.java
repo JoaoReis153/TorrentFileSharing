@@ -7,15 +7,8 @@ import FileSearch.WordSearchMessage;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import Messaging.NewConnectionRequest;
-import java.io.BufferedReader;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InvalidClassException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.StreamCorruptedException;
+
+import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -30,8 +23,8 @@ public class SubNode extends Thread {
     private final Socket socket;
     private final boolean outgoingConnection;
 
-    private ObjectOutputStream out;
-    private ObjectInputStream in;
+    private DataOutputStream out;
+    private DataInputStream in;
     private int originalBeforeOSchangePort;
     private boolean running = true;
     private CountDownLatch blockAnswerLatch;
@@ -50,8 +43,8 @@ public class SubNode extends Thread {
 
     private void initializeStreams() {
         try {
-            out = new ObjectOutputStream(socket.getOutputStream());
-            in = new ObjectInputStream(socket.getInputStream());
+            out = new DataOutputStream(socket.getOutputStream());
+            in = new DataInputStream(socket.getInputStream());
         } catch (IOException e) {
             System.err.println("Error initializing streams: " + e.getMessage());
             closeResources();
@@ -60,48 +53,51 @@ public class SubNode extends Thread {
 
     private void handleCommunication() {
         try {
-            Object obj;
-            while (running && (obj = in.readObject()) != null) {
-                handleIncomingMessage(obj);
+            while (running) {
+                byte typeId = in.readByte();
+                int length = in.readInt();
+                if (length < 0) throw new IOException("Invalid message length: " + length);
+                
+                byte[] payload = new byte[length];
+                in.readFully(payload);
+                
+                handleIncomingMessage(typeId, payload);
             }
-        } catch (StreamCorruptedException e) {
-            System.err.println("Stream corrupted: " + e.getMessage());
-            e.printStackTrace();
         } catch (EOFException e) {
             System.err.println("End of stream reached unexpectedly.");
-        } catch (InvalidClassException e) {
-            System.err.println("Invalid class: " + e.getMessage());
-            e.printStackTrace();
         } catch (IOException e) {
             System.err.println(
                 node.getAddressAndPortFormated() + "IO error: " + e.getMessage()
             );
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            System.err.println("Class not found: " + e.getMessage());
-            e.printStackTrace();
+            // e.printStackTrace(); // Optional: remove if too noisy
         } finally {
-            System.err.println("Closed in 0");
+            System.err.println("Closed connection for " + node.getAddressAndPortFormated());
             close();
         }
     }
 
-    private void handleIncomingMessage(Object obj) {
-        if (obj instanceof NewConnectionRequest) {
-            handleNewConnectionRequest((NewConnectionRequest) obj);
-        } else if (obj instanceof WordSearchMessage) {
-            handleWordSearchMessage((WordSearchMessage) obj);
-        } else if (obj instanceof FileSearchResult[]) {
-            handleFileSearchResults((FileSearchResult[]) obj);
-        } else if (obj instanceof FileBlockRequestMessage) {
-            handleFileBlockRequest((FileBlockRequestMessage) obj);
-        } else if (obj instanceof FileBlockAnswerMessage) {
-            handleFileBlockAnswer((FileBlockAnswerMessage) obj);
-        } else {
-            System.out.println(
-                node.getAddressAndPortFormated() +
-                "Received unknown message type"
-            );
+    private void handleIncomingMessage(byte typeId, byte[] payload) throws IOException {
+        switch (typeId) {
+            case NewConnectionRequest.TYPE_ID:
+                handleNewConnectionRequest(NewConnectionRequest.fromBytes(payload));
+                break;
+            case WordSearchMessage.TYPE_ID:
+                handleWordSearchMessage(WordSearchMessage.fromBytes(payload));
+                break;
+            case FileSearchResult.ARRAY_TYPE_ID:
+                handleFileSearchResults(FileSearchResult.arrayFromBytes(payload));
+                break;
+            case FileBlockRequestMessage.TYPE_ID:
+                handleFileBlockRequest(FileBlockRequestMessage.fromBytes(payload));
+                break;
+            case FileBlockAnswerMessage.TYPE_ID:
+                handleFileBlockAnswer(FileBlockAnswerMessage.fromBytes(payload));
+                break;
+            default:
+                System.out.println(
+                    node.getAddressAndPortFormated() +
+                    "Received unknown message type ID: " + typeId
+                );
         }
     }
 
@@ -268,27 +264,43 @@ public class SubNode extends Thread {
      * Sends an object through the socket
      */
     public synchronized void sendObject(Object message) {
-        /*
-        System.out.println(
-            node.getAddressAndPortFormated() + "Sending  " + message.toString()
-        );
-         */
-        if (out != null && !socket.isClosed()) {
-            try {
-                out.reset();
-                out.writeObject(message);
-                out.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-                close();
-            }
-        } else {
-            System.out.println(
-                node.getAddressAndPortFormated() +
-                "Cannot send message because socket is closed"
-            );
+        if (out == null || socket.isClosed()) {
+            System.out.println("Socket closed, cannot send");
             close();
-            System.out.println( node.getAddressAndPortFormated() + "Socket is closed");
+            return;
+        }
+
+        try {
+            byte typeId;
+            byte[] payload;
+
+            if (message instanceof NewConnectionRequest m) {
+                typeId = NewConnectionRequest.TYPE_ID;
+                payload = m.toBytes();
+            } else if (message instanceof WordSearchMessage m) {
+                typeId = WordSearchMessage.TYPE_ID;
+                payload = m.toBytes();
+            } else if (message instanceof FileSearchResult[] m) {
+                typeId = FileSearchResult.ARRAY_TYPE_ID;
+                payload = FileSearchResult.arrayToBytes(m);
+            } else if (message instanceof FileBlockRequestMessage m) {
+                typeId = FileBlockRequestMessage.TYPE_ID;
+                payload = m.toBytes();
+            } else if (message instanceof FileBlockAnswerMessage m) {
+                typeId = FileBlockAnswerMessage.TYPE_ID;
+                payload = m.toBytes();
+            } else {
+                throw new IllegalArgumentException("Unknown message type");
+            }
+
+            out.writeByte(typeId);
+            out.writeInt(payload.length);
+            out.write(payload);
+            out.flush();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            close();
         }
     }
 

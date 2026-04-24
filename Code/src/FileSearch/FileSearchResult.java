@@ -1,16 +1,36 @@
 package FileSearch;
 
 import Core.Node;
+import Messaging.BinaryProtocol;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
-import java.io.Serializable;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Arrays;
 
-public class FileSearchResult
-    implements Serializable, Comparable<FileSearchResult> {
+/**
+ * Result of a file search containing file metadata and the node hosting it.
+ *
+ * Wire layout (single item):
+ *   [String: fileName]
+ *   [byte[]: hash]
+ *   [long: fileSize]
+ *   [InetAddress: address]
+ *   [int: port]
+ *   [int: displayNumber]
+ *
+ * Wire layout (array):
+ *   [int: length]
+ *   [items...]
+ */
+public class FileSearchResult implements Comparable<FileSearchResult> {
+
+    public static final byte ARRAY_TYPE_ID = 3;
 
     private WordSearchMessage searchMessage;
-    private static final long serialVersionUID = 1L;
     private String fileName;
     private byte[] hash;
     private long fileSize;
@@ -42,6 +62,53 @@ public class FileSearchResult
         this.address = node.getAddress();
         this.port = node.getPort();
     }
+
+    // ── Serialization ─────────────────────────────────────────────────────────
+
+    public void writeToStream(DataOutputStream dos) throws IOException {
+        BinaryProtocol.writeString(dos, fileName);
+        BinaryProtocol.writeBytes(dos, hash);
+        dos.writeLong(fileSize);
+        BinaryProtocol.writeInetAddress(dos, address);
+        dos.writeInt(port);
+        dos.writeInt(displayNumber);
+    }
+
+    public static FileSearchResult readFromStream(DataInputStream dis) throws IOException {
+        String fileName = BinaryProtocol.readString(dis);
+        byte[] hash = BinaryProtocol.readBytes(dis);
+        long fileSize = dis.readLong();
+        InetAddress address = BinaryProtocol.readInetAddress(dis);
+        int port = dis.readInt();
+        int displayNumber = dis.readInt();
+
+        FileSearchResult res = new FileSearchResult(null, fileName, hash, fileSize, address, port);
+        res.setDisplayNumber(displayNumber);
+        return res;
+    }
+
+    public static byte[] arrayToBytes(FileSearchResult[] array) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeInt(array.length);
+        for (FileSearchResult item : array) {
+            item.writeToStream(dos);
+        }
+        dos.flush();
+        return baos.toByteArray();
+    }
+
+    public static FileSearchResult[] arrayFromBytes(byte[] bytes) throws IOException {
+        DataInputStream dis = new DataInputStream(new ByteArrayInputStream(bytes));
+        int len = dis.readInt();
+        FileSearchResult[] array = new FileSearchResult[len];
+        for (int i = 0; i < len; i++) {
+            array[i] = readFromStream(dis);
+        }
+        return array;
+    }
+
+    // ── Getters/Setters ───────────────────────────────────────────────────────
 
     public WordSearchMessage getSearchMessage() {
         return searchMessage;
