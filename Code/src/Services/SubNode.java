@@ -77,6 +77,9 @@ public class SubNode extends Thread {
     }
 
     private void handleIncomingMessage(byte typeId, byte[] payload) throws IOException {
+        if (payload.length > 1024 * 1024) {
+            throw new IOException("Payload too large: " + payload.length + " bytes");
+        }
         switch (typeId) {
             case NewConnectionRequest.TYPE_ID:
                 handleNewConnectionRequest(NewConnectionRequest.fromBytes(payload));
