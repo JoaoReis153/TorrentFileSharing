@@ -1,8 +1,11 @@
 package Core;
 
+import java.io.InputStream;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.Enumeration;
 
@@ -14,12 +17,18 @@ public class Utils {
      * The hash is calculated using the SHA-256 algorithm   
      */
     public static byte[] calculateFileHash(String filePath) {
-        try {
-            byte[] fileContents = java.nio.file.Files.readAllBytes(
-                java.nio.file.Paths.get(filePath)
-            );
+        try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
 
-            return MessageDigest.getInstance("SHA-256").digest(fileContents);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+
+            byte[] buffer = new byte[8192];
+            int read;
+
+            while ((read = is.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+
+            return digest.digest();
 
         } catch (Exception e) {
             throw new IllegalStateException(
