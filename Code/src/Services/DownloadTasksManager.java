@@ -4,7 +4,9 @@ import Core.Node;
 import FileSearch.FileSearchResult;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -26,13 +28,15 @@ public class DownloadTasksManager extends Thread {
     private ExecutorService threadPool;
     private CountDownLatch latch;
     private List<FileBlockRequestMessage> requestList;
-    private Set<FileBlockAnswerMessage> answerList;
+    private Set<FileBlockRequestMessage> completedRequests;
+    private File destinationFile;
     private Map<String, Integer> numberOfDownloadsForPeer;
     private ArrayList<SubNode> peersWithFile;
     private int totalBlocks;
     private int completedBlocks;
     private int runningAssistants;
     private boolean running = true;
+    private boolean downloadSuccessful = false;
 
     public DownloadTasksManager(Node node, List<FileSearchResult> requests) {
         this.node = node;
@@ -45,7 +49,7 @@ public class DownloadTasksManager extends Thread {
             "Download task manager created for file " +
             example.getHash()
         );
-        this.answerList = new HashSet<FileBlockAnswerMessage>();
+        this.completedRequests = new HashSet<FileBlockRequestMessage>();
         this.numberOfDownloadsForPeer = new HashMap<>();
         this.requestList = FileBlockRequestMessage.createBlockList(
             example.getHash(),
@@ -54,6 +58,7 @@ public class DownloadTasksManager extends Thread {
         this.totalBlocks = requestList.size();
         this.completedBlocks = 0;
         this.peersWithFile = getNodesWithFile();
+        this.destinationFile = new File(buildFilePath(example.getFileName()));
 
         //In case there are no nodes with the file, return
         if(peersWithFile.isEmpty()) {
@@ -83,6 +88,7 @@ public class DownloadTasksManager extends Thread {
 
             long start = System.currentTimeMillis();
             processDownload();
+            downloadSuccessful = true;
             long duration = System.currentTimeMillis() - start;
             long safeDurationMs = Math.max(1L, duration);
             long bytesPerSecond = (example.getFileSize() * 1000L) / safeDurationMs;
@@ -105,11 +111,18 @@ public class DownloadTasksManager extends Thread {
             );
             node.removeDownloadProcess(example.getHash());
             node.getGUI().reloadListModel();
+            node.loadHashes();
         } catch (Exception e) {
             node.getGUI().finishDownloadProgress(example.getHash());
-            System.out.println(node.getAddressAndPortFormated() + "Error in DownloadTasksManager");
-            e.printStackTrace();
-            System.exit(1);
+            System.out.println(node.getAddressAndPortFormated() + "Error in DownloadTasksManager: " + e.getMessage());
+            // e.printStackTrace();
+        } finally {
+            if (!downloadSuccessful) {
+                System.err.println(node.getAddressAndPortFormated() + " [taskmanager] Download failed or interrupted. Deleting partial file: " + destinationFile.getAbsolutePath());
+                if (destinationFile.exists()) {
+                    destinationFile.delete();
+                }
+            }
         }
 
         if (!running && !finished()) {
@@ -156,16 +169,6 @@ public class DownloadTasksManager extends Thread {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        /*
-        System.out.println(
-            node.getAddressAndPortFormated() +
-            "[taskmanager]" +
-            "All assistants finished"
-        );
-        */
-
-        assembleAndWriteFile(example.getFileName(), answerList);
     }
 
     public void addNumberOfDownloadsForPeer(String peer, int number) {
@@ -217,27 +220,32 @@ public class DownloadTasksManager extends Thread {
     }
 
     public synchronized void addDownloadAnswer(FileBlockAnswerMessage answer) {
-        if (!answerList.contains(answer)) {
-            answerList.add(answer);
+        if (completedRequests.contains(answer.getRequest())) {
+            return;
+        }
+
+        try (RandomAccessFile raf = new RandomAccessFile(destinationFile, "rw")) {
+            raf.seek(answer.getOffset());
+            raf.write(answer.getData());
+            
+            completedRequests.add(answer.getRequest());
             completedBlocks++;
             latch.countDown();
             node
                 .getGUI()
                 .updateDownloadProgress(example.getHash(), completedBlocks);
-            notify();
+            notifyAll();
+        } catch (IOException e) {
+            System.err.println(node.getAddressAndPortFormated() + " Error writing block to disk: " + e.getMessage());
+            running = false;
         }
     }
 
-    public synchronized FileBlockAnswerMessage getRespectiveAnswerMessage(
+    public synchronized boolean isBlockCompleted(
         FileBlockRequestMessage request
     ) throws InterruptedException {
-        if (answerList.isEmpty()) wait(300);
-        for (FileBlockAnswerMessage answer : answerList) {
-            if (answer.getRequest().equals(request)) {
-                return answer;
-            }
-        }
-        return null;
+        if (completedRequests.isEmpty()) wait(300);
+        return completedRequests.contains(request);
     }
 
     private ArrayList<SubNode> getNodesWithFile() {
@@ -257,84 +265,15 @@ public class DownloadTasksManager extends Thread {
         return nodesWithFile;
     }
 
-    public Set<FileBlockAnswerMessage> getAnswerList() {
-        return answerList;
+    public Set<FileBlockRequestMessage> getCompletedRequests() {
+        return completedRequests;
     }
 
     public Node getNode() {
         return node;
     }
 
-    private void assembleAndWriteFile(
-        String fileName,
-        Set<FileBlockAnswerMessage> receivedBlockMap
-    ) {
-        TreeMap<Long, byte[]> fileParts = collectFileParts(receivedBlockMap);
-        if (fileParts.isEmpty()) return;
-        String filePath = buildFilePath(fileName);
-        writeFileToDisc(filePath, fileParts);
-        verifyFileCreation(filePath);
-        node.loadHashes();
-    }
-
-    private TreeMap<Long, byte[]> collectFileParts(
-        Set<FileBlockAnswerMessage> receivedBlockMap
-    ) {
-        TreeMap<Long, byte[]> fileParts = new TreeMap<>();
-
-        for (FileBlockAnswerMessage block : receivedBlockMap) {
-            if (block.getData() == null) {
-                System.err.println(
-                    "Warning: Block data is null for offset: " +
-                    block.getOffset()
-                );
-                return new TreeMap<>();
-            }
-            fileParts.put(block.getOffset(), block.getData());
-        }
-
-        return fileParts;
-    }
-
-    private void writeFileToDisc(
-        String filePath,
-        TreeMap<Long, byte[]> fileParts
-    ) {
-        byte[] combinedData = combineFileParts(fileParts);
-
-        try {
-            Files.write(Paths.get(filePath), combinedData);
-        } catch (IOException e) {
-            System.out.println("Error writing file: " + filePath);
-            e.printStackTrace();
-        }
-    }
-
-    private byte[] combineFileParts(TreeMap<Long, byte[]> fileParts) {
-        int totalSize = 0;
-        for (byte[] bytes : fileParts.values()) {
-            totalSize += bytes.length;
-        }
-
-        byte[] combinedData = new byte[totalSize];
-        int position = 0;
-
-        for (byte[] part : fileParts.values()) {
-            System.arraycopy(part, 0, combinedData, position, part.length);
-            position += part.length;
-        }
-
-        return combinedData;
-    }
-
-    private void verifyFileCreation(String filePath) {
-        java.io.File file = new java.io.File(filePath);
-        if (!file.exists()) {
-            System.err.println("Error: File was not created at: " + filePath);
-        }
-    }
-
     private String buildFilePath(String fileName) {
-        return (getNode().getFolder().getAbsolutePath() + "/" + fileName);
+        return (getNode().getFolder().getAbsolutePath() + File.separator + fileName);
     }
 }

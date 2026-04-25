@@ -459,7 +459,7 @@ public class Node {
      * It uses the address and port of who sent the answer,
      * to know how many answers has each peer sent
      */
-    public void addDownloadAnswer(
+    public void writeBlockToFile(
         byte[] hash,
         InetAddress address,
         int port,

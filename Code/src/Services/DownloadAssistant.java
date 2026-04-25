@@ -88,9 +88,7 @@ public class DownloadAssistant extends Thread {
 
         while (System.currentTimeMillis() < endTime) {
             try {
-                FileBlockAnswerMessage answer =
-                    taskManager.getRespectiveAnswerMessage(request);
-                if (answer != null) {
+                if (taskManager.isBlockCompleted(request)) {
                     return true; // Answer received
                 }
             } catch (InterruptedException e) {

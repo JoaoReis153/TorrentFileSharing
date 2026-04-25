@@ -77,7 +77,7 @@ public class SubNode extends Thread {
     }
 
     private void handleIncomingMessage(byte typeId, byte[] payload) throws IOException {
-        if (payload.length > 1024 * 1024) {
+        if (payload.length > 2 * 1024 * 1024) {
             throw new IOException("Payload too large: " + payload.length + " bytes");
         }
         switch (typeId) {
@@ -202,22 +202,20 @@ public class SubNode extends Thread {
      * And counts down the latch
      */
     private void handleFileBlockAnswer(FileBlockAnswerMessage answer) {
-        /*
-        System.out.println(
-            node.getAddressAndPortFormated() + "Received " + answer
-        );
-         */
         int port = Utils.isValidPort(socket.getPort())
             ? socket.getPort()
             : originalBeforeOSchangePort;
 
-        node.addDownloadAnswer(
+        node.writeBlockToFile(
             answer.getHash(),
             socket.getInetAddress(),
             port,
             answer
         );
-        if (blockAnswerLatch != null) blockAnswerLatch.countDown();
+
+        if (blockAnswerLatch != null) {
+            blockAnswerLatch.countDown();
+        }
     }
 
     /*
