@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -39,13 +40,13 @@ public class Node {
     private ArrayList<FileBlockRequestMessage> blocksToProcess;
     private ExecutorService senders;
     private final int numberOfSenders = 5;
-    private HashMap<String, byte[]> hashes;
+    private Map<String, byte[]> hashes;
 
     private final ExecutorService downloadTaskManagersThreadPool =
         Executors.newFixedThreadPool(10);
 
     public Node(int nodeId, GUI gui) {
-        this.hashes = new HashMap<>();
+        this.hashes = new ConcurrentHashMap<>();
         this.nodeId = nodeId;
         this.port = BASE_PORT + nodeId;
         this.gui = gui;
@@ -339,25 +340,27 @@ public class Node {
      * In this project, the hashes are used to identify the files
      */
     public void loadHashes() {
-        if (folder == null || !folder.exists() || !folder.isDirectory()) return;
+        new Thread(() -> {
+            if (folder == null || !folder.exists() || !folder.isDirectory()) return;
 
-        File[] files = folder.listFiles();
-        if (files == null) return;
+            File[] files = folder.listFiles();
+            if (files == null) return;
 
-        for (File file : files) {
-            try {
-                hashes.put(
-                    file.getAbsolutePath(),
-                    Utils.calculateFileHash(file.getAbsolutePath())
-                );
-            } catch (RuntimeException e) {
-                System.err.println(
-                    getAddressAndPortFormated() +
-                    " Failed to load hash for file: " +
-                    file.getAbsolutePath()
-                );
+            for (File file : files) {
+                try {
+                    hashes.put(
+                        file.getAbsolutePath(),
+                        Utils.calculateFileHash(file.getAbsolutePath())
+                    );
+                } catch (RuntimeException e) {
+                    System.err.println(
+                        getAddressAndPortFormated() +
+                        " Failed to load hash for file: " +
+                        file.getAbsolutePath()
+                    );
+                }
             }
-        }
+        }).start();
     }
 
 

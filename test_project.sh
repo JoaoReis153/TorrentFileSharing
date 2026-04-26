@@ -25,6 +25,7 @@ if [ ! -d "$TARGET_FILE_STRUCTURE" ]; then
 fi
 
 # Copy files/dl* into Code/files/dl*
+echo "Setting up file structure..."
 for source_dir in "$SOURCE_FILE_STRUCTURE"/dl*; do
   [ -d "$source_dir" ] || continue
   target_dir="$TARGET_FILE_STRUCTURE/$(basename "$source_dir")"
@@ -37,6 +38,7 @@ for source_dir in "$SOURCE_FILE_STRUCTURE"/dl*; do
 done
 
 # Compile Java files
+echo "Compiling..."
 javac -d "$BIN_DIR" -sourcepath "$SRC_DIR" $(find "$SRC_DIR" -name "*.java")
 if [ $? -ne 0 ]; then
   echo "Compilation failed!"
