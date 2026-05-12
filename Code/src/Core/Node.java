@@ -1,7 +1,6 @@
 package Core;
 
 import FileSearch.FileSearchResult;
-import GUI.GUI;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import Services.DownloadTasksManager;
@@ -36,7 +35,7 @@ public class Node {
     private final File folder;
     private final Set<SubNode> peers;
     private final HashMap<String, DownloadTasksManager> downloadManagers;
-    private final GUI gui;
+    private final NodeListener listener;
     private ArrayList<FileBlockRequestMessage> blocksToProcess;
     private ExecutorService senders;
     private final int numberOfSenders = 5;
@@ -45,11 +44,11 @@ public class Node {
     private final ExecutorService downloadTaskManagersThreadPool =
         Executors.newFixedThreadPool(10);
 
-    public Node(int nodeId, GUI gui) {
+    public Node(int nodeId, NodeListener listener) {
         this.hashes = new ConcurrentHashMap<>();
         this.nodeId = nodeId;
         this.port = BASE_PORT + nodeId;
-        this.gui = gui;
+        this.listener = listener;
         this.peers = new HashSet<>();
         this.downloadManagers = new HashMap<>();
         this.blocksToProcess = new ArrayList<>();
@@ -497,8 +496,8 @@ public class Node {
         return folder;
     }
 
-    public GUI getGUI() {
-        return gui;
+    public NodeListener getListener() {
+        return listener;
     }
 
     public int getId() {

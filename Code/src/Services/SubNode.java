@@ -113,9 +113,9 @@ public class SubNode extends Thread {
     private void handleNewConnectionRequest(NewConnectionRequest request) {
         this.originalBeforeOSchangePort = request.getClientPort();
 
-        if (!outgoingConnection && node.getGUI() != null) {
+        if (!outgoingConnection && node.getListener() != null) {
             boolean accepted = node
-                    .getGUI()
+                    .getListener()
                     .confirmIncomingConnection(
                             request.getClientAddress().getHostAddress(),
                             request.getClientPort()
@@ -162,7 +162,7 @@ public class SubNode extends Thread {
      * The file search results are used to send the files that contain the keyword  
      */
     private void handleFileSearchResults(FileSearchResult[] results) {
-        if (node.getGUI() == null) {
+        if (node.getListener() == null) {
             System.out.println(
                 node.getAddressAndPortFormated() +
                 "There was a problem with the GUI"
@@ -177,7 +177,7 @@ public class SubNode extends Thread {
             " search results"
         );
          */
-        node.getGUI().loadListModel(results);
+        node.getListener().loadListModel(results);
     }
 
     /*
@@ -413,8 +413,8 @@ public class SubNode extends Thread {
             socket +
             ", node=" +
             node +
-            ", gui=" +
-            node.getGUI() +
+            ", listener=" +
+            node.getListener() +
             ", outgoingConnection=" +
             outgoingConnection +
             ", running=" +

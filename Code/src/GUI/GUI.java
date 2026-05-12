@@ -31,9 +31,10 @@ import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
 
 import Core.Node;
+import Core.NodeListener;
 import FileSearch.FileSearchResult;
 
-public class GUI {
+public class GUI implements NodeListener {
 
     private JFrame frame;
     private JList<FileSearchResult> fileList;
@@ -257,6 +258,7 @@ public class GUI {
      * The list model is reloaded by sending a new word search message request 
      * with the previous searched word to all the nodes
      */
+    @Override
     public synchronized void reloadListModel() {
         /*
         System.out.println(
@@ -272,6 +274,7 @@ public class GUI {
      * Loads the list model with the given list of files
      * The list model is used to display the files in the GUI
      */
+    @Override
     public synchronized void loadListModel(FileSearchResult[] list) {
         if (list == null || list.length == 0) return;
         File[] files = node.getFolder().listFiles();
@@ -313,6 +316,7 @@ public class GUI {
         return list;
     }
 
+    @Override
     public synchronized void startDownloadProgress(
         byte[] hash,
         String fileName,
@@ -328,6 +332,7 @@ public class GUI {
         progressWindow.open();
     }
 
+    @Override
     public synchronized void updateDownloadProgress(byte[] hash, int completedBlocks) {
         GUIDownloadProgress progressWindow = activeDownloadProgress.get(hashKey(hash));
         if (progressWindow != null) {
@@ -335,6 +340,7 @@ public class GUI {
         }
     }
 
+    @Override
     public synchronized void finishDownloadProgress(byte[] hash) {
         GUIDownloadProgress progressWindow = activeDownloadProgress.remove(hashKey(hash));
         if (progressWindow != null) {
@@ -342,6 +348,7 @@ public class GUI {
         }
     }
 
+    @Override
     public synchronized void completeDownloadProgress(
         byte[] hash,
         long durationInMiliseconds,
@@ -353,6 +360,7 @@ public class GUI {
         }
     }
 
+    @Override
     public boolean confirmIncomingConnection(String address, int port) {
         if (!SHOW) return true;
 

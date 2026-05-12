@@ -79,7 +79,7 @@ public class DownloadTasksManager extends Thread {
     public void run() {
         try {
             node
-                .getGUI()
+                .getListener()
                 .startDownloadProgress(
                     example.getHash(),
                     example.getFileName(),
@@ -94,7 +94,7 @@ public class DownloadTasksManager extends Thread {
             long bytesPerSecond = (example.getFileSize() * 1000L) / safeDurationMs;
 
             node
-                .getGUI()
+                .getListener()
                 .completeDownloadProgress(
                     example.getHash(),
                     duration,
@@ -110,10 +110,10 @@ public class DownloadTasksManager extends Thread {
                 " bytes/s"
             );
             node.removeDownloadProcess(example.getHash());
-            node.getGUI().reloadListModel();
+            node.getListener().reloadListModel();
             node.loadHashes();
         } catch (Exception e) {
-            node.getGUI().finishDownloadProgress(example.getHash());
+            node.getListener().finishDownloadProgress(example.getHash());
             System.out.println(node.getAddressAndPortFormated() + "Error in DownloadTasksManager: " + e.getMessage());
             // e.printStackTrace();
         } finally {
@@ -232,7 +232,7 @@ public class DownloadTasksManager extends Thread {
             completedBlocks++;
             latch.countDown();
             node
-                .getGUI()
+                .getListener()
                 .updateDownloadProgress(example.getHash(), completedBlocks);
             notifyAll();
         } catch (IOException e) {
