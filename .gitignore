@@ -33,13 +33,10 @@ Thumbs.db
 # Gradle files
 .gradle/
 build/
-.gradle/
 **/build/
 
 # IntelliJ IDEA files
 .idea/
-*.iml
-*.iws
 
 # Eclipse-specific launch files
 *.launch
@@ -51,6 +48,7 @@ ajcore.*
 
 # Other files
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.ear
 
