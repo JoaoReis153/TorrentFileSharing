@@ -1,7 +1,8 @@
-# Eclipse project files
-/.classpath
-/.project
-/.settings/
+# Eclipse workspace and project files
+.metadata/
+.classpath
+.project
+.settings/
 
 # Java and Maven/Gradle build files
 /bin/

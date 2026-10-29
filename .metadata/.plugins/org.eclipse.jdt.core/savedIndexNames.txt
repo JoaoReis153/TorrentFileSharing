@@ -1,3 +1,0 @@
-INDEX VERSION 1.134+/Users/joaoreis/Library/CloudStorage/GoogleDrive-joaosimoesreis.jsr@gmail.com/My Drive/Educação/Faculdade/3Ano/1ºSemestre/Programação Concorrente e Distribuída/Praticas/Projeto/.metadata/.plugins/org.eclipse.jdt.core
-1943015282.index
-1865797976.index
