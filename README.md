@@ -1,5 +1,7 @@
 # TorrentFileSharing
 
+[![CI](https://github.com/JoaoReis153/TorrentFileSharing/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/JoaoReis153/TorrentFileSharing/actions/workflows/ci.yml)
+
 A local peer-to-peer file-sharing system built in Java. Nodes discover files by keyword, then download them in parallel blocks from every peer that has the file — no central server required.
 
 ---
