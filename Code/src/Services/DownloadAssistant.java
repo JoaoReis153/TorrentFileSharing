@@ -1,5 +1,6 @@
 package Services;
 
+import Core.Config;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import java.util.concurrent.CountDownLatch;
@@ -10,7 +11,6 @@ public class DownloadAssistant extends Thread {
     private SubNode peerToRequestBlock;
     private boolean timedOut = false;
     private int timeoutCount;
-    private final int MAX_TIMEOUT_COUNT = 5;
 
     public DownloadAssistant(
         DownloadTasksManager taskManager,
@@ -61,9 +61,9 @@ public class DownloadAssistant extends Thread {
     private void handleRequest(FileBlockRequestMessage request) {
         peerToRequestBlock.sendFileBlockRequest(request);
 
-        if (!waitForAnswer(request, 100000)) {
+        if (!waitForAnswer(request, Config.BLOCK_ANSWER_TIMEOUT_MS)) {
             timeoutCount++;
-            if (timeoutCount > MAX_TIMEOUT_COUNT) {
+            if (timeoutCount > Config.MAX_TIMEOUTS_PER_PEER) {
                 taskManager.stopRunning();
                 timedOut = true;
             }

@@ -1,5 +1,6 @@
 package Tests;
 
+import Core.Config;
 import Core.Node;
 import Core.NodeListener;
 import FileSearch.FileSearchResult;
@@ -159,7 +160,7 @@ public class Benchmark {
         List<GUI> seeders = new ArrayList<>();
         for (int id : seederIds) {
             GUI gui = new GUI(id, false);
-            writeFile(Node.WORK_FOLDER + id + File.separator + BENCH_FILE_NAME, fileContent);
+            writeFile(Config.WORK_FOLDER + id + File.separator + BENCH_FILE_NAME, fileContent);
             gui.getNode().loadHashes(); // pick up the newly written file
             gui.open();
             seeders.add(gui);
@@ -201,7 +202,7 @@ public class Benchmark {
         long duration = benchListener.awaitCompletion(DOWNLOAD_TIMEOUT_MS);
 
         // 7 — Delete the downloaded file so the next run starts clean
-        new File(Node.WORK_FOLDER + downloaderId
+        new File(Config.WORK_FOLDER + downloaderId
             + File.separator + BENCH_FILE_NAME).delete();
 
         return duration;

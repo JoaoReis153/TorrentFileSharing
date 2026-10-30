@@ -1,5 +1,6 @@
 package Messaging;
 
+import Core.Config;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -22,10 +23,6 @@ import java.util.List;
 public class FileBlockRequestMessage {
 
     public static final byte TYPE_ID = 4;
-
-    private static final int DEFAULT_TARGET_BLOCK_COUNT = 64;
-    private static final int MIN_BLOCK_SIZE = 1024;
-    private static final int MAX_BLOCK_SIZE = 1024 * 1024;
 
     private byte[] hash;
     private long offset;
@@ -154,14 +151,14 @@ public class FileBlockRequestMessage {
 
     private static int getDynamicBlockSize(long fileSize) {
         if (fileSize <= 0) {
-            return MIN_BLOCK_SIZE;
+            return Config.MIN_BLOCK_SIZE;
         }
 
-        long proposedBlockSize = (fileSize + DEFAULT_TARGET_BLOCK_COUNT - 1) /
-            DEFAULT_TARGET_BLOCK_COUNT;
+        long proposedBlockSize = (fileSize + Config.TARGET_BLOCK_COUNT - 1) /
+            Config.TARGET_BLOCK_COUNT;
         long boundedBlockSize = Math.max(
-            MIN_BLOCK_SIZE,
-            Math.min(MAX_BLOCK_SIZE, proposedBlockSize)
+            Config.MIN_BLOCK_SIZE,
+            Math.min(Config.MAX_BLOCK_SIZE, proposedBlockSize)
         );
 
         return (int) boundedBlockSize;

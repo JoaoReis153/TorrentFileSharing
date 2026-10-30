@@ -1,5 +1,6 @@
 package Services;
 
+import Core.Config;
 import Core.Node;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
@@ -87,7 +88,7 @@ public class SenderAssistant extends Thread {
      * If the file is not found, it returns null.
      */ 
     private synchronized File findFileByHash(byte[] hash) {
-        File folder = new File(Node.WORK_FOLDER + node.getId() + "/");
+        File folder = new File(Config.WORK_FOLDER + node.getId() + "/");
         if (!folder.isDirectory()) {
             throw new IllegalArgumentException(
                 "Invalid directory path: " + folder.getPath()

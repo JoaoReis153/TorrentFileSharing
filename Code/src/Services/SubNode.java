@@ -1,5 +1,6 @@
 package Services;
 
+import Core.Config;
 import Core.Node;
 import Core.Utils;
 import FileSearch.FileSearchResult;
@@ -77,7 +78,7 @@ public class SubNode extends Thread {
     }
 
     private void handleIncomingMessage(byte typeId, byte[] payload) throws IOException {
-        if (payload.length > 2 * 1024 * 1024) {
+        if (payload.length > Config.MAX_PAYLOAD_SIZE) {
             throw new IOException("Payload too large: " + payload.length + " bytes");
         }
         switch (typeId) {

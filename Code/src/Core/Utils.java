@@ -21,7 +21,7 @@ public class Utils {
 
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
 
-            byte[] buffer = new byte[8192];
+            byte[] buffer = new byte[Config.HASH_BUFFER_SIZE];
             int read;
 
             while ((read = is.read(buffer)) != -1) {
@@ -40,12 +40,12 @@ public class Utils {
 
     // Checks if a port is valid
     public static Boolean isValidPort(int port) {
-        return port > 8080 && port <= 10000;
+        return port >= Config.MIN_NODE_PORT && port <= Config.MAX_NODE_PORT;
     }
 
     // Checks if a node ID is valid
     public static Boolean isValidID(int id) {
-        return id > 0 && id <= 41070;
+        return id >= Config.MIN_NODE_ID && id <= Config.MAX_NODE_ID;
     }
 
 

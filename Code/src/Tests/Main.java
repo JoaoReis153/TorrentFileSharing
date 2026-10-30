@@ -1,5 +1,6 @@
 package Tests;
 
+import Core.Config;
 import Core.Node;
 import GUI.GUI;
 import java.io.File;
@@ -9,7 +10,7 @@ import java.util.Scanner;
 public class Main {
 
     private static final String DEFAULT_FILE_STRUCTURE = "files";
-    private static final String NODE_FILES_BASE = Node.WORK_FOLDER;
+    private static final String NODE_FILES_BASE = Config.WORK_FOLDER;
     private static int id = -1;
 
     public static void main(String[] args) {

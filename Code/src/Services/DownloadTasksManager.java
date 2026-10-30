@@ -1,5 +1,6 @@
 package Services;
 
+import Core.Config;
 import Core.Node;
 import FileSearch.FileSearchResult;
 import Messaging.FileBlockAnswerMessage;
@@ -244,7 +245,7 @@ public class DownloadTasksManager extends Thread {
     public synchronized boolean isBlockCompleted(
         FileBlockRequestMessage request
     ) throws InterruptedException {
-        if (completedRequests.isEmpty()) wait(300);
+        if (completedRequests.isEmpty()) wait(Config.COMPLETED_BLOCK_POLL_MS);
         return completedRequests.contains(request);
     }
 

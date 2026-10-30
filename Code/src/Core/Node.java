@@ -25,10 +25,6 @@ import java.util.concurrent.Executors;
 
 public class Node {
 
-    public static final String WORK_FOLDER = "Code/files/dl";
-    private static final int BASE_PORT = 8080;
-    private static final int MAX_PORT = 65535;
-
     private final int nodeId;
     private final int port;
     private final InetAddress address;
@@ -38,22 +34,21 @@ public class Node {
     private final NodeListener listener;
     private ArrayList<FileBlockRequestMessage> blocksToProcess;
     private ExecutorService senders;
-    private final int numberOfSenders = 5;
     private Map<String, byte[]> hashes;
 
     private final ExecutorService downloadTaskManagersThreadPool =
-        Executors.newFixedThreadPool(10);
+        Executors.newFixedThreadPool(Config.MAX_CONCURRENT_DOWNLOADS);
 
     public Node(int nodeId, NodeListener listener) {
         this.hashes = new ConcurrentHashMap<>();
         this.nodeId = nodeId;
-        this.port = BASE_PORT + nodeId;
+        this.port = Config.BASE_PORT + nodeId;
         this.listener = listener;
         this.peers = new HashSet<>();
         this.downloadManagers = new HashMap<>();
         this.blocksToProcess = new ArrayList<>();
         validateId();
-        initializeSenders(numberOfSenders);
+        initializeSenders(Config.SENDER_THREADS);
         this.folder = createWorkingDirectory();
         this.address = initializeAddress();
         loadHashes();
@@ -96,7 +91,8 @@ public class Node {
     private void validateId() { 
         if (!Utils.isValidID(this.nodeId)) {
             throw new IllegalArgumentException(
-                "Invalid node ID. Input a valid number (1-41070)"
+                "Invalid node ID. Input a valid number (" +
+                Config.MIN_NODE_ID + "-" + Config.MAX_NODE_ID + ")"
             );
         }
     }
@@ -106,7 +102,7 @@ public class Node {
      * The working directory is the directory where the node will store the files
      */
     private File createWorkingDirectory() {
-        File folder = new File(WORK_FOLDER + nodeId);
+        File folder = new File(Config.WORK_FOLDER + nodeId);
         if (!folder.exists() && !folder.mkdirs()) {
             throw new RuntimeException(
                 getAddressAndPortFormated() +
@@ -227,7 +223,7 @@ public class Node {
         InetAddress targetAddress,
         int targetPort
     ) {
-        if (targetPort <= BASE_PORT || targetPort >= MAX_PORT) {
+        if (!Utils.isValidPort(targetPort)) {
             System.out.println(
                 getAddressAndPortFormated() +
                 "Failed to connect: Invalid port range"
@@ -289,7 +285,7 @@ public class Node {
             handler.start();
             peers.add(handler);
 
-            Thread.sleep(100);
+            Thread.sleep(Config.CONNECTION_SETUP_DELAY_MS);
             handler.sendNewConnectionRequest(address, port);
         } catch (IOException e) {
             System.err.println( getAddressAndPortFormated() +
