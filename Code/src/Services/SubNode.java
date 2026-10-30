@@ -59,6 +59,10 @@ public class SubNode extends Thread {
                 int length = in.readInt();
                 if (length < 0) throw new IOException("Invalid message length: " + length);
                 
+                if (length > Config.MAX_PAYLOAD_SIZE) {
+                    throw new IOException("Payload too large: " + length + " bytes");
+                }
+
                 byte[] payload = new byte[length];
                 in.readFully(payload);
                 
@@ -78,9 +82,6 @@ public class SubNode extends Thread {
     }
 
     private void handleIncomingMessage(byte typeId, byte[] payload) throws IOException {
-        if (payload.length > Config.MAX_PAYLOAD_SIZE) {
-            throw new IOException("Payload too large: " + payload.length + " bytes");
-        }
         switch (typeId) {
             case NewConnectionRequest.TYPE_ID:
                 handleNewConnectionRequest(NewConnectionRequest.fromBytes(payload));
