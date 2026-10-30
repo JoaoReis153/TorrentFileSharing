@@ -1,7 +1,6 @@
 package Services;
 
 import Core.Config;
-import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import java.util.concurrent.CountDownLatch;
 
@@ -61,7 +60,7 @@ public class DownloadAssistant extends Thread {
     private void handleRequest(FileBlockRequestMessage request) {
         peerToRequestBlock.sendFileBlockRequest(request);
 
-        if (!waitForAnswer(request, Config.BLOCK_ANSWER_TIMEOUT_MS)) {
+        if (!waitForAnswer(request)) {
             timeoutCount++;
             if (timeoutCount > Config.MAX_TIMEOUTS_PER_PEER) {
                 taskManager.stopRunning();
@@ -81,11 +80,10 @@ public class DownloadAssistant extends Thread {
      * In case the answer is not received within the timeout, it returns false.
      */
     private boolean waitForAnswer(
-        FileBlockRequestMessage request,
-        long timeoutMs
+        FileBlockRequestMessage request
     ) {
         try {
-            return taskManager.waitForBlock(request, timeoutMs);
+            return taskManager.waitForBlock(request, Config.BLOCK_ANSWER_TIMEOUT_MS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt(); // Restore interrupted status
             System.out.println( taskManager.getNode().getAddressAndPortFormated() + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
