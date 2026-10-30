@@ -38,8 +38,6 @@ public final class Config {
     public static final long BLOCK_ANSWER_TIMEOUT_MS = 100_000;
     // Timeouts allowed per peer before giving up on it
     public static final int MAX_TIMEOUTS_PER_PEER = 5;
-    // How long to wait for the first completed block before checking again
-    public static final long COMPLETED_BLOCK_POLL_MS = 300;
     // Pause after opening a connection before sending the handshake
     public static final long CONNECTION_SETUP_DELAY_MS = 100;
 

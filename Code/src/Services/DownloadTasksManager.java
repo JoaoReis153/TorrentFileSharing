@@ -1,6 +1,5 @@
 package Services;
 
-import Core.Config;
 import Core.Node;
 import Core.Utils;
 import FileSearch.FileSearchResult;
@@ -254,11 +253,18 @@ public class DownloadTasksManager extends Thread {
         }
     }
 
-    public synchronized boolean isBlockCompleted(
-        FileBlockRequestMessage request
+
+    public synchronized boolean waitForBlock(
+        FileBlockRequestMessage request,
+        long timeoutMs
     ) throws InterruptedException {
-        if (completedRequests.isEmpty()) wait(Config.COMPLETED_BLOCK_POLL_MS);
-        return completedRequests.contains(request);
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (!completedRequests.contains(request)) {
+            long remaining = deadline - System.currentTimeMillis();
+            if (remaining <= 0) return false;
+            wait(remaining);
+        }
+        return true;
     }
 
     private ArrayList<SubNode> getNodesWithFile() {

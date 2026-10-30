@@ -84,19 +84,12 @@ public class DownloadAssistant extends Thread {
         FileBlockRequestMessage request,
         long timeoutMs
     ) {
-        long endTime = System.currentTimeMillis() + timeoutMs;
-
-        while (System.currentTimeMillis() < endTime) {
-            try {
-                if (taskManager.isBlockCompleted(request)) {
-                    return true; // Answer received
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt(); // Restore interrupted status
-                System.out.println( taskManager.getNode().getAddressAndPortFormated() + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
-                return false; // Handle interruption as a failure
-            }
+        try {
+            return taskManager.waitForBlock(request, timeoutMs);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupted status
+            System.out.println( taskManager.getNode().getAddressAndPortFormated() + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
+            return false; // Handle interruption as a failure
         }
-        return false; // Timeout occurred
     }
 }
