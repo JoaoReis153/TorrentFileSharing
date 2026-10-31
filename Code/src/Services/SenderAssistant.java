@@ -47,8 +47,13 @@ public class SenderAssistant extends Thread {
             return;
         }
 
-        node.getPeerToSend(request.getSenderAddress(), request.getSenderPort())
-                .sendFileBlockAnswer(answer);
+        SubNode peer = node.getPeerToSend(request.getSenderAddress(), request.getSenderPort());
+        if (peer == null) {
+            System.out.println(
+                    node.getAddressAndPortFormated() + " SenderAssistant: Requesting peer is gone");
+            return;
+        }
+        peer.sendFileBlockAnswer(answer);
     }
 
     /*

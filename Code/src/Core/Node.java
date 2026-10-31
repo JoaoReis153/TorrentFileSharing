@@ -43,7 +43,7 @@ public class Node {
         this.nodeId = nodeId;
         this.port = Config.BASE_PORT + nodeId;
         this.listener = listener;
-        this.peers = new HashSet<>();
+        this.peers = ConcurrentHashMap.newKeySet();
         this.downloadManagers = new ConcurrentHashMap<>();
         this.blocksToProcess = new ArrayList<>();
         validateId();
