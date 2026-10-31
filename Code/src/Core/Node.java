@@ -13,7 +13,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -30,7 +29,7 @@ public class Node {
     private final InetAddress address;
     private final File folder;
     private final Set<SubNode> peers;
-    private final HashMap<String, DownloadTasksManager> downloadManagers;
+    private final Map<String, DownloadTasksManager> downloadManagers;
     private final NodeListener listener;
     private ArrayList<FileBlockRequestMessage> blocksToProcess;
     private ExecutorService senders;
@@ -45,7 +44,7 @@ public class Node {
         this.port = Config.BASE_PORT + nodeId;
         this.listener = listener;
         this.peers = new HashSet<>();
-        this.downloadManagers = new HashMap<>();
+        this.downloadManagers = new ConcurrentHashMap<>();
         this.blocksToProcess = new ArrayList<>();
         validateId();
         initializeSenders(Config.SENDER_THREADS);
@@ -290,8 +289,8 @@ public class Node {
             FileSearchResult example = file.get(0);
             System.out.println(getAddressAndPortFormated() + "Request file: " + example);
             DownloadTasksManager downloadManager = new DownloadTasksManager(this, file);
-            downloadTaskManagersThreadPool.execute(downloadManager);
             downloadManagers.put(hashKey, downloadManager);
+            downloadTaskManagersThreadPool.execute(downloadManager);
         }
     }
 
@@ -431,6 +430,10 @@ public class Node {
     // Remove a peer from the list of peers
     public void removePeer(SubNode peer) {
         peers.remove(peer);
+        // Let active downloads hand this peer's blocks to the others right away
+        for (DownloadTasksManager manager : downloadManagers.values()) {
+            manager.peerDisconnected(peer);
+        }
         int port =
                 Utils.isValidPort(peer.getSocket().getPort())
                         ? peer.getSocket().getPort()

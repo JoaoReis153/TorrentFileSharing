@@ -5,17 +5,12 @@ import Core.Utils;
 import FileSearch.FileSearchResult;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.CountDownLatch;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,7 +20,6 @@ public class DownloadTasksManager extends Thread {
     private FileSearchResult fileInfo;
     private List<FileSearchResult> requests;
     private ExecutorService threadPool;
-    private CountDownLatch latch;
     private List<FileBlockRequestMessage> requestList;
     private Set<FileBlockRequestMessage> completedRequests;
     private File destinationFile;
@@ -33,8 +27,10 @@ public class DownloadTasksManager extends Thread {
     private ArrayList<SubNode> peersWithFile;
     private int totalBlocks;
     private int completedBlocks;
-    private int runningAssistants;
-    private boolean running = true;
+    private int activeAssistants;
+    private final Set<SubNode> disconnectedPeers =
+            Collections.newSetFromMap(new IdentityHashMap<>());
+    private String failureReason;
     private boolean downloadSuccessful = false;
 
     public DownloadTasksManager(Node node, List<FileSearchResult> requests) {
@@ -97,7 +93,6 @@ public class DownloadTasksManager extends Thread {
                             + "] at a rate of "
                             + bytesPerSecond
                             + " bytes/s");
-            node.removeDownloadProcess(fileInfo.getHash());
             node.getListener().reloadListModel();
             node.loadHashes();
         } catch (Exception e) {
@@ -108,6 +103,8 @@ public class DownloadTasksManager extends Thread {
                             + e.getMessage());
             // e.printStackTrace();
         } finally {
+            if (threadPool != null) threadPool.shutdownNow();
+            node.removeDownloadProcess(fileInfo.getHash());
             if (!downloadSuccessful) {
                 System.err.println(
                         node.getAddressAndPortFormated()
@@ -118,45 +115,27 @@ public class DownloadTasksManager extends Thread {
                 }
             }
         }
-
-        if (!running && !finished()) {
-            System.out.println(
-                    node.getAddressAndPortFormated()
-                            + "[taskmanager]"
-                            + "Download process was interrupted");
-        }
     }
 
-    public synchronized void stopRunning() throws RuntimeException {
-        runningAssistants--;
-        if (runningAssistants == 0) {
-            throw new RuntimeException("Download process was interrupted");
-        }
-    }
-
-    private void processDownload() {
-        latch = new CountDownLatch(requestList.size());
-        for (int i = 0; i < peersWithFile.size(); i++) {
-            DownloadAssistant assistant =
-                    new DownloadAssistant(this, latch, peersWithFile.get(i), i);
-
-            runningAssistants++;
-            threadPool.execute(assistant);
-            /*
-            System.out.println(
-                node.getAddressAndPortFormated() +
-                "[taskmanager]" +
-                "Submitted " +
-                (i + 1) +
-                "º assistant"
-            );
-            */
+    /*
+     * Starts one assistant per peer and waits until every block is written,
+     * or until the download can't finish (no peers left, disk error).
+     */
+    private void processDownload() throws IOException, InterruptedException {
+        synchronized (this) {
+            if (peersWithFile.isEmpty()) {
+                throw new IOException("No peers have the file");
+            }
+            activeAssistants = peersWithFile.size();
         }
 
-        try {
-            latch.await();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        for (SubNode peer : peersWithFile) {
+            threadPool.execute(new DownloadAssistant(this, peer));
+        }
+
+        synchronized (this) {
+            while (!allBlocksWritten() && failureReason == null) wait();
+            if (failureReason != null) throw new IOException(failureReason);
         }
     }
 
@@ -176,32 +155,59 @@ public class DownloadTasksManager extends Thread {
         }
     }
 
-    public List<FileBlockRequestMessage> getDownloadRequestList() {
-        return requestList;
+    private boolean allBlocksWritten() {
+        return completedBlocks == totalBlocks;
     }
 
-    public boolean finished() {
-        return requestList.isEmpty();
+    private boolean isOver() {
+        return allBlocksWritten() || failureReason != null;
     }
 
-    public synchronized FileBlockRequestMessage getDownloadRequest() throws InterruptedException {
-        while (requestList.isEmpty()) wait();
-
-        FileBlockRequestMessage request = requestList.remove(0);
-        return request;
-    }
-
-    public synchronized SubNode getNewPeer(SubNode peer) {
-        if (peersWithFile.contains(peer)) peersWithFile.remove(peer);
-        if (peersWithFile.isEmpty() && !finished()) {
-            throw new RuntimeException(
-                    "No more nodes available with the file. Download process cannot continue.");
+    /*
+     * Gives the next block to download from this peer.
+     * Waits while other assistants still have blocks in flight, since those
+     * may come back if their peer drops. Returns null when there's nothing
+     * left to do for this peer.
+     */
+    public synchronized FileBlockRequestMessage getDownloadRequest(SubNode peer)
+            throws InterruptedException {
+        while (true) {
+            if (isOver() || isPeerDisconnected(peer)) return null;
+            while (!requestList.isEmpty()) {
+                FileBlockRequestMessage request = requestList.remove(0);
+                if (!completedRequests.contains(request)) return request;
+            }
+            wait();
         }
-        return peersWithFile.get(0);
     }
 
+    // Puts a block back in the queue so another assistant can download it
     public synchronized void addDownloadRequest(FileBlockRequestMessage request) {
+        if (completedRequests.contains(request)) return;
         requestList.add(request);
+        notifyAll();
+    }
+
+    public synchronized void peerDisconnected(SubNode peer) {
+        for (SubNode p : peersWithFile) {
+            if (p == peer) {
+                disconnectedPeers.add(peer);
+                notifyAll();
+                return;
+            }
+        }
+    }
+
+    public synchronized boolean isPeerDisconnected(SubNode peer) {
+        return disconnectedPeers.contains(peer) || peer.getSocket().isClosed();
+    }
+
+    // Called by each assistant when it stops, for any reason
+    public synchronized void assistantStopped() {
+        activeAssistants--;
+        if (activeAssistants == 0 && !isOver()) {
+            failureReason = "No peers left with the file";
+        }
         notifyAll();
     }
 
@@ -220,7 +226,6 @@ public class DownloadTasksManager extends Thread {
 
             completedRequests.add(answer.getRequest());
             completedBlocks++;
-            latch.countDown();
             node.getListener().updateDownloadProgress(fileInfo.getHash(), completedBlocks);
             notifyAll();
         } catch (IOException e) {
@@ -228,14 +233,22 @@ public class DownloadTasksManager extends Thread {
                     node.getAddressAndPortFormated()
                             + " Error writing block to disk: "
                             + e.getMessage());
-            running = false;
+            failureReason = "Error writing block to disk: " + e.getMessage();
+            notifyAll();
         }
     }
 
-    public synchronized boolean waitForBlock(FileBlockRequestMessage request, long timeoutMs)
+    /*
+     * Sleeps until the block is written, the peer disconnects,
+     * the download ends, or the timeout runs out.
+     * Returns true only if the block was written.
+     */
+    public synchronized boolean waitForBlock(
+            FileBlockRequestMessage request, SubNode peer, long timeoutMs)
             throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (!completedRequests.contains(request)) {
+            if (failureReason != null || isPeerDisconnected(peer)) return false;
             long remaining = deadline - System.currentTimeMillis();
             if (remaining <= 0) return false;
             wait(remaining);
@@ -253,10 +266,6 @@ public class DownloadTasksManager extends Thread {
             }
         }
         return nodesWithFile;
-    }
-
-    public Set<FileBlockRequestMessage> getCompletedRequests() {
-        return completedRequests;
     }
 
     public Node getNode() {

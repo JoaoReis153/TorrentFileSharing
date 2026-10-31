@@ -2,90 +2,63 @@ package Services;
 
 import Core.Config;
 import Messaging.FileBlockRequestMessage;
-import java.util.concurrent.CountDownLatch;
 
 public class DownloadAssistant extends Thread {
 
     private final DownloadTasksManager taskManager;
-    private SubNode peerToRequestBlock;
-    private boolean timedOut = false;
+    private final SubNode peerToRequestBlock;
     private int timeoutCount;
 
-    public DownloadAssistant(
-            DownloadTasksManager taskManager,
-            CountDownLatch latch,
-            SubNode peerToRequestBlock,
-            int ID) {
+    public DownloadAssistant(DownloadTasksManager taskManager, SubNode peerToRequestBlock) {
         this.timeoutCount = 0;
         this.taskManager = taskManager;
         this.peerToRequestBlock = peerToRequestBlock;
     }
 
     /*
-     * While the taskManager still has requests to be processed (its not finished) and the timedOut flag is false
-     *
-     * It takes a block request message from the taskManager and sends it to the peer to request the
-     * and waits for the answer to arrive.
-     *
+     * Keeps taking blocks from the taskManager and requesting them from this peer
+     * until there's nothing left, the peer disconnects, or it times out too often.
+     * Always tells the taskManager when it stops, so the download can fail
+     * instead of hanging when no peers are left.
      */
     @Override
     public void run() {
-        while (!taskManager.finished() && !timedOut) {
-            FileBlockRequestMessage request;
-            try {
-                request = taskManager.getDownloadRequest();
-                if (request != null) {
-                    handleRequest(request);
-                }
-            } catch (InterruptedException e) {
-                System.out.println(
-                        taskManager.getNode().getAddressAndPortFormated()
-                                + " [taskmanager] [downloadassistant] Error in DownloadAssistant");
-                e.printStackTrace();
+        try {
+            while (true) {
+                FileBlockRequestMessage request =
+                        taskManager.getDownloadRequest(peerToRequestBlock);
+                if (request == null) break;
+                if (!handleRequest(request)) break;
             }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Download was cancelled
+        } finally {
+            taskManager.assistantStopped();
         }
     }
 
     /*
-     * Handles a block request message
+     * Requests one block from the peer and waits for it.
      *
-     * It takes a block request message and sends it to the peer to request the
-     * and waits for the answer to arrive.
-     *
-     * In case the answer is not received within the timeout, it returns the request back to the taskManager
-     *
-     * And in case the number of timeouts exceeds the maximum, it stops the download assistant
+     * If it doesn't arrive, the block goes back to the taskManager for another peer.
+     * Returns false when this assistant should stop: the peer disconnected,
+     * or it timed out more than the allowed number of times.
      */
-    private void handleRequest(FileBlockRequestMessage request) {
+    private boolean handleRequest(FileBlockRequestMessage request) throws InterruptedException {
         peerToRequestBlock.sendFileBlockRequest(request);
 
-        if (!waitForAnswer(request)) {
-            timeoutCount++;
-            if (timeoutCount > Config.MAX_TIMEOUTS_PER_PEER) {
-                taskManager.stopRunning();
-                timedOut = true;
-            }
-            taskManager.addDownloadRequest(request);
+        if (taskManager.waitForBlock(request, peerToRequestBlock, Config.BLOCK_ANSWER_TIMEOUT_MS)) {
+            return true;
         }
-    }
 
-    /*
-     * Waits for a block answer message
-     *
-     * It takes a block request message and waits for the
-     * block answer message corresponding to the request to arrive.
-     *
-     * In case the answer is not received within the timeout, it returns false.
-     */
-    private boolean waitForAnswer(FileBlockRequestMessage request) {
-        try {
-            return taskManager.waitForBlock(request, Config.BLOCK_ANSWER_TIMEOUT_MS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt(); // Restore interrupted status
+        taskManager.addDownloadRequest(request);
+        if (taskManager.isPeerDisconnected(peerToRequestBlock)) {
             System.out.println(
                     taskManager.getNode().getAddressAndPortFormated()
-                            + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
-            return false; // Handle interruption as a failure
+                            + " [taskmanager] [downloadassistant] Peer disconnected, handing its block back");
+            return false;
         }
+        timeoutCount++;
+        return timeoutCount <= Config.MAX_TIMEOUTS_PER_PEER;
     }
 }
