@@ -11,10 +11,9 @@ import java.util.Enumeration;
 
 public class Utils {
 
-
     /*
      * Calculates the hash of a file
-     * The hash is calculated using the SHA-256 algorithm   
+     * The hash is calculated using the SHA-256 algorithm
      */
     public static byte[] calculateFileHash(String filePath) {
         try (InputStream is = Files.newInputStream(Paths.get(filePath))) {
@@ -31,10 +30,7 @@ public class Utils {
             return digest.digest();
 
         } catch (Exception e) {
-            throw new IllegalStateException(
-                "Failed to calculate file hash for: " + filePath,
-                e
-            );
+            throw new IllegalStateException("Failed to calculate file hash for: " + filePath, e);
         }
     }
 
@@ -48,10 +44,9 @@ public class Utils {
         return id >= Config.MIN_NODE_ID && id <= Config.MAX_NODE_ID;
     }
 
-
-    // Returns the local IP address of the computer that the program is running on     
+    // Returns the local IP address of the computer that the program is running on
     public static InetAddress getLocalIPAddress() throws Exception {
-        
+
         Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
         while (networkInterfaces.hasMoreElements()) {
             NetworkInterface networkInterface = networkInterfaces.nextElement();
@@ -65,7 +60,7 @@ public class Utils {
                 }
             }
         }
-    
-        return null; 
+
+        return null;
     }
 }

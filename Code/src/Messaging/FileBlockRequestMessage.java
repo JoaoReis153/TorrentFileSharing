@@ -13,12 +13,8 @@ import java.util.List;
 /**
  * Request for a specific block of a file.
  *
- * Wire layout:
- *   [byte[]: hash]
- *   [long: offset]
- *   [int: length]
- *   [String: senderAddress]
- *   [int: senderPort]
+ * <p>Wire layout: [byte[]: hash] [long: offset] [int: length] [String: senderAddress] [int:
+ * senderPort]
  */
 public class FileBlockRequestMessage {
 
@@ -107,11 +103,7 @@ public class FileBlockRequestMessage {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FileBlockRequestMessage that = (FileBlockRequestMessage) o;
-        return (
-            Arrays.equals(hash, that.hash) &&
-            offset == that.offset &&
-            length == that.length
-        );
+        return (Arrays.equals(hash, that.hash) && offset == that.offset && length == that.length);
     }
 
     @Override
@@ -127,25 +119,18 @@ public class FileBlockRequestMessage {
         String hashString = Arrays.toString(hash);
         int hashLen = hashString.length();
 
-        String hashDisplay = hashLen > 10
-            ? hashString.substring(hashLen - 10)
-            : hashString;
+        String hashDisplay = hashLen > 10 ? hashString.substring(hashLen - 10) : hashString;
 
-        return (
-            "FileBlockRequestMessage [hash=" +
-            hashDisplay +
-            ", offset=" +
-            offset +
-            ", length=" +
-            length +
-            "]"
-        );
+        return ("FileBlockRequestMessage [hash="
+                + hashDisplay
+                + ", offset="
+                + offset
+                + ", length="
+                + length
+                + "]");
     }
 
-    public static List<FileBlockRequestMessage> createBlockList(
-        byte[] hash,
-        long fileSize
-    ) {
+    public static List<FileBlockRequestMessage> createBlockList(byte[] hash, long fileSize) {
         return createBlockList(hash, fileSize, getDynamicBlockSize(fileSize));
     }
 
@@ -154,21 +139,16 @@ public class FileBlockRequestMessage {
             return Config.MIN_BLOCK_SIZE;
         }
 
-        long proposedBlockSize = (fileSize + Config.TARGET_BLOCK_COUNT - 1) /
-            Config.TARGET_BLOCK_COUNT;
-        long boundedBlockSize = Math.max(
-            Config.MIN_BLOCK_SIZE,
-            Math.min(Config.MAX_BLOCK_SIZE, proposedBlockSize)
-        );
+        long proposedBlockSize =
+                (fileSize + Config.TARGET_BLOCK_COUNT - 1) / Config.TARGET_BLOCK_COUNT;
+        long boundedBlockSize =
+                Math.max(Config.MIN_BLOCK_SIZE, Math.min(Config.MAX_BLOCK_SIZE, proposedBlockSize));
 
         return (int) boundedBlockSize;
     }
 
     public static List<FileBlockRequestMessage> createBlockList(
-        byte[] hash,
-        long fileSize,
-        int blockSize
-    ) {
+            byte[] hash, long fileSize, int blockSize) {
         List<FileBlockRequestMessage> blockList = new ArrayList<>();
         long offset = 0;
 

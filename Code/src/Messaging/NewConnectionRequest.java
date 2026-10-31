@@ -8,13 +8,11 @@ import java.io.IOException;
 import java.net.InetAddress;
 
 /**
- * Sent once by the connecting side to announce its actual listen port
- * (which differs from the ephemeral OS port visible on the remote side).
+ * Sent once by the connecting side to announce its actual listen port (which differs from the
+ * ephemeral OS port visible on the remote side).
  *
- * Wire layout (8–20 bytes):
- *   [1 byte : addr length (4=IPv4, 16=IPv6)]
- *   [N bytes: raw address]
- *   [4 bytes: clientPort]
+ * <p>Wire layout (8–20 bytes): [1 byte : addr length (4=IPv4, 16=IPv6)] [N bytes: raw address] [4
+ * bytes: clientPort]
  */
 public class NewConnectionRequest {
 
@@ -58,7 +56,10 @@ public class NewConnectionRequest {
 
     @Override
     public String toString() {
-        return "NewConnectionRequest [clientAddress=" + clientAddress
-                + ", clientPort=" + clientPort + "]";
+        return "NewConnectionRequest [clientAddress="
+                + clientAddress
+                + ", clientPort="
+                + clientPort
+                + "]";
     }
 }

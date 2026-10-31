@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.Scanner;
+import java.util.Set;
 
 public class Test {
 
@@ -42,13 +42,12 @@ public class Test {
         private final long preDownloadDelayMs;
 
         private TestScenario(
-            int mode,
-            String description,
-            boolean requiresConnections,
-            SearchTarget searchTarget,
-            DownloadTarget downloadTarget,
-            long preDownloadDelayMs
-        ) {
+                int mode,
+                String description,
+                boolean requiresConnections,
+                SearchTarget searchTarget,
+                DownloadTarget downloadTarget,
+                long preDownloadDelayMs) {
             this.mode = mode;
             this.description = description;
             this.requiresConnections = requiresConnections;
@@ -64,76 +63,59 @@ public class Test {
         Map<Integer, TestScenario> scenarios = new HashMap<>();
 
         scenarios.put(
-            0,
-            new TestScenario(
                 0,
-                "Create nodes only",
-                false,
-                SearchTarget.NONE,
-                DownloadTarget.NONE,
-                0
-            )
-        );
+                new TestScenario(
+                        0, "Create nodes only", false, SearchTarget.NONE, DownloadTarget.NONE, 0));
 
         scenarios.put(
-            1,
-            new TestScenario(
                 1,
-                "Create a network of nodes and connect them",
-                true,
-                SearchTarget.NONE,
-                DownloadTarget.NONE,
-                0
-            )
-        );
+                new TestScenario(
+                        1,
+                        "Create a network of nodes and connect them",
+                        true,
+                        SearchTarget.NONE,
+                        DownloadTarget.NONE,
+                        0));
 
         scenarios.put(
-            2,
-            new TestScenario(
                 2,
-                "Create a network, connect nodes, and search in the first node",
-                true,
-                SearchTarget.FIRST,
-                DownloadTarget.NONE,
-                0
-            )
-        );
+                new TestScenario(
+                        2,
+                        "Create a network, connect nodes, and search in the first node",
+                        true,
+                        SearchTarget.FIRST,
+                        DownloadTarget.NONE,
+                        0));
 
         scenarios.put(
-            3,
-            new TestScenario(
                 3,
-                "Create a network, connect nodes, and search in all nodes",
-                true,
-                SearchTarget.ALL,
-                DownloadTarget.NONE,
-                0
-            )
-        );
+                new TestScenario(
+                        3,
+                        "Create a network, connect nodes, and search in all nodes",
+                        true,
+                        SearchTarget.ALL,
+                        DownloadTarget.NONE,
+                        0));
 
         scenarios.put(
-            4,
-            new TestScenario(
                 4,
-                "Create a network, connect nodes, and download files in the last node",
-                true,
-                SearchTarget.ALL,
-                DownloadTarget.LAST,
-                0
-            )
-        );
+                new TestScenario(
+                        4,
+                        "Create a network, connect nodes, and download files in the last node",
+                        true,
+                        SearchTarget.ALL,
+                        DownloadTarget.LAST,
+                        0));
 
         scenarios.put(
-            5,
-            new TestScenario(
                 5,
-                "Create a network, connect nodes, and download files in every node",
-                true,
-                SearchTarget.ALL,
-                DownloadTarget.ALL,
-                DEFAULT_DELAY_BEFORE_DOWNLOAD_MS
-            )
-        );
+                new TestScenario(
+                        5,
+                        "Create a network, connect nodes, and download files in every node",
+                        true,
+                        SearchTarget.ALL,
+                        DownloadTarget.ALL,
+                        DEFAULT_DELAY_BEFORE_DOWNLOAD_MS));
 
         return scenarios;
     }
@@ -167,9 +149,7 @@ public class Test {
             try {
                 parsed.add(Integer.parseInt(arg));
             } catch (NumberFormatException e) {
-                System.err.println(
-                    "Invalid ID: " + arg + ". Please provide numeric values."
-                );
+                System.err.println("Invalid ID: " + arg + ". Please provide numeric values.");
             }
         }
 
@@ -252,9 +232,7 @@ public class Test {
      */
     private void initializeNodes() {
         if (inputs.size() == 0) {
-            System.out.println(
-                "Usage: Please provide at least one ID as arguments."
-            );
+            System.out.println("Usage: Please provide at least one ID as arguments.");
             return;
         }
 
@@ -264,16 +242,11 @@ public class Test {
                 guiList.add(gui);
                 gui.open();
             } catch (NumberFormatException e) {
-                System.err.println(
-                    "Invalid ID: " + id + ". Please provide numeric values."
-                );
+                System.err.println("Invalid ID: " + id + ". Please provide numeric values.");
             } catch (IllegalArgumentException e) {
                 System.err.println("Failed to create node: " + e.getMessage());
             } catch (Exception e) {
-                System.err.println(
-                    "An error occurred while initializing the node with ID: " +
-                    id
-                );
+                System.err.println("An error occurred while initializing the node with ID: " + id);
                 e.printStackTrace();
             }
         }
@@ -283,7 +256,7 @@ public class Test {
      * Connects all nodes in the provided list to each other.
      *
      * @param guiList List of GUI objects representing the nodes
-     */ 
+     */
     private void connectNodes() {
         for (GUI gui : guiList) {
             Node currentNode = gui.getNode();
@@ -291,9 +264,8 @@ public class Test {
                 if (currentNode != otherGui.getNode()) {
                     try {
                         currentNode.connectToNode(
-                            otherGui.getNode().getAddress().getHostAddress(),
-                            otherGui.getNode().getPort()
-                        );
+                                otherGui.getNode().getAddress().getHostAddress(),
+                                otherGui.getNode().getPort());
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -307,24 +279,22 @@ public class Test {
      *
      * @param guiList List of GUI objects representing the nodes
      */
-
     private static void broadcastSearchMessage(List<GUI> guiList, String broadcastString) {
         for (GUI gui : guiList) {
             gui.getNode().broadcastWordSearchMessageRequest(broadcastString);
         }
     }
-  
 
-     public static void main(String[] args) {
-        
+    public static void main(String[] args) {
+
         Scanner scanner = new Scanner(System.in);
-          HashSet<String> nodeIds = new HashSet<>();
+        HashSet<String> nodeIds = new HashSet<>();
 
         // Read the node IDs from user input
         System.out.println("Enter the node IDs (separated by spaces): ");
 
         String line = scanner.nextLine().trim();
-        
+
         // Split the line by spaces and add the IDs to the list
         String[] ids = line.split("\\s+");
         for (String id : ids) {
@@ -332,10 +302,9 @@ public class Test {
                 nodeIds.add(id);
             }
         }
-    
-        
+
         System.out.println("Node IDs entered: " + nodeIds);
-        
+
         /*
         Test:
         0 - Create nodes
@@ -354,7 +323,7 @@ public class Test {
             }
         }
         System.out.print("Enter the test number: ");
-        
+
         // Read the test mode interactively from user input
         int mode = -1; // Default mode
         try {

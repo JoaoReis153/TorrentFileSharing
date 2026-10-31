@@ -33,7 +33,8 @@ public interface NodeListener {
     /*
      * Called when a download completes successfully, passing duration and per-peer block counts.
      */
-    void completeDownloadProgress(byte[] hash, long durationInMs, Map<String, Integer> nodesNBlocks);
+    void completeDownloadProgress(
+            byte[] hash, long durationInMs, Map<String, Integer> nodesNBlocks);
 
     /*
      * Called when the node's file list may have changed and the listener should refresh its view.

@@ -43,45 +43,43 @@ public class GUINode {
         JButton okButton = new JButton("OK");
 
         cancelButton.addActionListener(
-            new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    frame.dispose();
-                }
-            }
-        );
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        frame.dispose();
+                    }
+                });
 
         okButton.addActionListener(
-            new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    String address = addressField.getText();
-                    String portText = portField.getText();
-                    try {
-                        int port = Integer.parseInt(portText);
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        String address = addressField.getText();
+                        String portText = portField.getText();
+                        try {
+                            int port = Integer.parseInt(portText);
 
-                        int choice = JOptionPane.showConfirmDialog(
-                            frame,
-                            "Connect to:\nAddress: " + address + "\nPort: " + port + "?",
-                            "Confirm Connection",
-                            JOptionPane.YES_NO_OPTION
-                        );
+                            int choice =
+                                    JOptionPane.showConfirmDialog(
+                                            frame,
+                                            "Connect to:\nAddress: "
+                                                    + address
+                                                    + "\nPort: "
+                                                    + port
+                                                    + "?",
+                                            "Confirm Connection",
+                                            JOptionPane.YES_NO_OPTION);
 
-                        if (choice == JOptionPane.YES_OPTION) {
-                            node.connectToNode(address, port);
+                            if (choice == JOptionPane.YES_OPTION) {
+                                node.connectToNode(address, port);
+                            }
+
+                        } catch (NumberFormatException ex) {
+                            JOptionPane.showMessageDialog(
+                                    frame, "Invalid port!", "Error", JOptionPane.ERROR_MESSAGE);
                         }
-
-                    } catch (NumberFormatException ex) {
-                        JOptionPane.showMessageDialog(
-                            frame,
-                            "Invalid port!",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE
-                        );
                     }
-                }
-            }
-        );
+                });
 
         frame.add(cancelButton);
         frame.add(okButton);

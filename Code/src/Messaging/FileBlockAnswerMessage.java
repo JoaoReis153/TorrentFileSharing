@@ -12,15 +12,8 @@ import java.util.Arrays;
 /**
  * Answer to a FileBlockRequestMessage, containing the actual file data.
  *
- * Wire layout:
- *   [int: nodeId]
- *   [byte[]: hash]
- *   [long: offset]
- *   [int: length]
- *   [int: senderPort]
- *   [String: senderAddress]
- *   [FileBlockRequestMessage: request]
- *   [byte[]: data]
+ * <p>Wire layout: [int: nodeId] [byte[]: hash] [long: offset] [int: length] [int: senderPort]
+ * [String: senderAddress] [FileBlockRequestMessage: request] [byte[]: data]
  */
 public class FileBlockAnswerMessage {
 
@@ -36,7 +29,12 @@ public class FileBlockAnswerMessage {
     private byte[] data;
     private File file;
 
-    public FileBlockAnswerMessage(String senderAddress, int senderPort, int nodeId, FileBlockRequestMessage request, File file) {
+    public FileBlockAnswerMessage(
+            String senderAddress,
+            int senderPort,
+            int nodeId,
+            FileBlockRequestMessage request,
+            File file) {
         this.senderPort = senderPort;
         this.senderAddress = senderAddress;
         this.request = request;
@@ -51,7 +49,15 @@ public class FileBlockAnswerMessage {
         loadDataFromFile();
     }
 
-    private FileBlockAnswerMessage(int nodeId, byte[] hash, long offset, int length, int senderPort, String senderAddress, FileBlockRequestMessage request, byte[] data) {
+    private FileBlockAnswerMessage(
+            int nodeId,
+            byte[] hash,
+            long offset,
+            int length,
+            int senderPort,
+            String senderAddress,
+            FileBlockRequestMessage request,
+            byte[] data) {
         this.nodeId = nodeId;
         this.hash = hash;
         this.offset = offset;
@@ -110,7 +116,8 @@ public class FileBlockAnswerMessage {
         FileBlockRequestMessage request = FileBlockRequestMessage.readFromStream(dis);
         byte[] data = BinaryProtocol.readBytes(dis);
 
-        return new FileBlockAnswerMessage(nodeId, hash, offset, length, senderPort, senderAddress, request, data);
+        return new FileBlockAnswerMessage(
+                nodeId, hash, offset, length, senderPort, senderAddress, request, data);
     }
 
     // ── Getters ───────────────────────────────────────────────────────────────
@@ -148,10 +155,10 @@ public class FileBlockAnswerMessage {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FileBlockAnswerMessage that = (FileBlockAnswerMessage) o;
-        return nodeId == that.nodeId &&
-                offset == that.offset &&
-                length == that.length &&
-                Arrays.equals(hash, that.hash);
+        return nodeId == that.nodeId
+                && offset == that.offset
+                && length == that.length
+                && Arrays.equals(hash, that.hash);
     }
 
     @Override
@@ -165,12 +172,17 @@ public class FileBlockAnswerMessage {
 
     @Override
     public String toString() {
-        return "FileBlockAnswerMessage{" +
-                "nodeId=" + nodeId +
-                ", hash=" + Arrays.toString(hash) +
-                ", offset=" + offset +
-                ", length=" + length +
-                ", dataSize=" + (data != null ? data.length : 0) +
-                '}';
+        return "FileBlockAnswerMessage{"
+                + "nodeId="
+                + nodeId
+                + ", hash="
+                + Arrays.toString(hash)
+                + ", offset="
+                + offset
+                + ", length="
+                + length
+                + ", dataSize="
+                + (data != null ? data.length : 0)
+                + '}';
     }
 }

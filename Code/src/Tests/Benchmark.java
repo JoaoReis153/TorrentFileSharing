@@ -5,7 +5,6 @@ import Core.Node;
 import Core.NodeListener;
 import FileSearch.FileSearchResult;
 import GUI.GUI;
-
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -15,19 +14,19 @@ public class Benchmark {
 
     // ── Configuration ──────────────────────────────────────────────────────────
 
-    private final int    maxSeeds;
-    private final int    iterations;
-    private final long   fileSizeBytes;
+    private final int maxSeeds;
+    private final int iterations;
+    private final long fileSizeBytes;
     private final String csvOutputPath;
 
     /** How long to wait for TCP connections to settle after connecting nodes. */
-    private static final long CONNECT_SETTLE_MS   = 400;
+    private static final long CONNECT_SETTLE_MS = 400;
 
     /**
-     * How long to wait after broadcasting the search before triggering the download.
-     * Must be long enough for all seeders to respond.
+     * How long to wait after broadcasting the search before triggering the download. Must be long
+     * enough for all seeders to respond.
      */
-    private static final long SEARCH_SETTLE_MS    = 1_500;
+    private static final long SEARCH_SETTLE_MS = 1_500;
 
     /** Maximum time to wait for a download to finish before declaring a timeout. */
     private static final long DOWNLOAD_TIMEOUT_MS = 120_000;
@@ -39,26 +38,26 @@ public class Benchmark {
     // ── Construction / entry-point ─────────────────────────────────────────────
 
     public Benchmark(int maxSeeds, int iterations, long fileSizeBytes, String csvOutputPath) {
-        this.maxSeeds      = maxSeeds;
-        this.iterations    = iterations;
+        this.maxSeeds = maxSeeds;
+        this.iterations = iterations;
         this.fileSizeBytes = fileSizeBytes;
         this.csvOutputPath = csvOutputPath;
     }
 
     public static void main(String[] args) throws Exception {
-        int    maxSeeds      = 10;
-        int    iterations    = 3;
-        long   fileSizeBytes = 1024L * 1024 * 100; // 100 MB default
-        String csvPath       = "benchmark/benchmark_results.csv";
+        int maxSeeds = 10;
+        int iterations = 3;
+        long fileSizeBytes = 1024L * 1024 * 100; // 100 MB default
+        String csvPath = "benchmark/benchmark_results.csv";
 
         try {
-            if (args.length >= 1) maxSeeds      = Integer.parseInt(args[0]);
-            if (args.length >= 2) iterations    = Integer.parseInt(args[1]);
+            if (args.length >= 1) maxSeeds = Integer.parseInt(args[0]);
+            if (args.length >= 2) iterations = Integer.parseInt(args[1]);
             if (args.length >= 3) fileSizeBytes = Long.parseLong(args[2]);
-            if (args.length >= 4) csvPath       = args[3];
+            if (args.length >= 4) csvPath = args[3];
         } catch (NumberFormatException e) {
             System.err.println(
-                "Usage: Benchmark [maxSeeds] [iterations] [fileSizeBytes] [csvPath]");
+                    "Usage: Benchmark [maxSeeds] [iterations] [fileSizeBytes] [csvPath]");
             System.exit(1);
         }
 
@@ -68,8 +67,8 @@ public class Benchmark {
         }
 
         System.out.printf(
-            "Benchmark  maxSeeds=%d  iterations=%d  fileSize=%,d bytes  csv=%s%n",
-            maxSeeds, iterations, fileSizeBytes, csvPath);
+                "Benchmark  maxSeeds=%d  iterations=%d  fileSize=%,d bytes  csv=%s%n",
+                maxSeeds, iterations, fileSizeBytes, csvPath);
 
         new Benchmark(maxSeeds, iterations, fileSizeBytes, csvPath).run();
         System.exit(0); // stop lingering non-daemon node threads
@@ -82,9 +81,10 @@ public class Benchmark {
 
         // CSV rows
         List<String[]> rows = new ArrayList<>();
-        rows.add(new String[]{
-            "seeds", "iteration", "file_size_bytes", "duration_ms", "throughput_mb_per_sec"
-        });
+        rows.add(
+                new String[] {
+                    "seeds", "iteration", "file_size_bytes", "duration_ms", "throughput_mb_per_sec"
+                });
 
         // Per-seed aggregates for the summary table
         Map<Integer, List<Long>> durationsPerSeed = new LinkedHashMap<>();
@@ -101,7 +101,7 @@ public class Benchmark {
                     long duration = runSingleBenchmark(seeds, fileContent);
                     if (duration > 0) {
                         double mbps = (fileSizeBytes / 1_048_576.0) / (duration / 1_000.0);
-                        durationStr   = String.valueOf(duration);
+                        durationStr = String.valueOf(duration);
                         throughputStr = String.format("%.4f", mbps);
                         System.out.printf("%d ms  (%.2f MB/s)%n", duration, mbps);
                         durations.add(duration);
@@ -114,13 +114,14 @@ public class Benchmark {
                     System.out.println("ERROR: " + e.getMessage());
                 }
 
-                rows.add(new String[]{
-                    String.valueOf(seeds),
-                    String.valueOf(iter),
-                    String.valueOf(fileSizeBytes),
-                    durationStr,
-                    throughputStr
-                });
+                rows.add(
+                        new String[] {
+                            String.valueOf(seeds),
+                            String.valueOf(iter),
+                            String.valueOf(fileSizeBytes),
+                            durationStr,
+                            throughputStr
+                        });
 
                 Thread.sleep(300); // brief cooldown between runs
             }
@@ -129,8 +130,7 @@ public class Benchmark {
         }
 
         writeCsv(rows, csvOutputPath);
-        System.out.println("\nResults written to: "
-            + new File(csvOutputPath).getAbsolutePath());
+        System.out.println("\nResults written to: " + new File(csvOutputPath).getAbsolutePath());
 
         printSummaryTable(durationsPerSeed);
     }
@@ -138,10 +138,9 @@ public class Benchmark {
     // ── Single benchmark run ───────────────────────────────────────────────────
 
     /**
-     * Spins up {@code seedCount} seeder nodes pre-loaded with the test file,
-     * plus one downloader node with a {@link BenchmarkNodeListener}.
-     * Connects them, broadcasts a search, waits for results, triggers the
-     * download, and returns the duration in milliseconds as measured inside
+     * Spins up {@code seedCount} seeder nodes pre-loaded with the test file, plus one downloader
+     * node with a {@link BenchmarkNodeListener}. Connects them, broadcasts a search, waits for
+     * results, triggers the download, and returns the duration in milliseconds as measured inside
      * {@link Services.DownloadTasksManager}.
      *
      * @return download duration in ms, or -1 on timeout / failure
@@ -172,18 +171,15 @@ public class Benchmark {
         Node downloader = new Node(downloaderId, benchListener);
         benchListener.setNode(downloader);
 
-        Thread serverThread = new Thread(
-            downloader::startServing, "bench-server-" + downloaderId);
+        Thread serverThread = new Thread(downloader::startServing, "bench-server-" + downloaderId);
         serverThread.setDaemon(true);
         serverThread.start();
         Thread.sleep(200); // let downloader server start
 
         // 3 — Connect every seeder → downloader
         for (GUI seeder : seeders) {
-            seeder.getNode().connectToNode(
-                downloader.getAddress().getHostAddress(),
-                downloader.getPort()
-            );
+            seeder.getNode()
+                    .connectToNode(downloader.getAddress().getHostAddress(), downloader.getPort());
         }
         Thread.sleep(CONNECT_SETTLE_MS);
 
@@ -202,8 +198,7 @@ public class Benchmark {
         long duration = benchListener.awaitCompletion(DOWNLOAD_TIMEOUT_MS);
 
         // 7 — Delete the downloaded file so the next run starts clean
-        new File(Config.WORK_FOLDER + downloaderId
-            + File.separator + BENCH_FILE_NAME).delete();
+        new File(Config.WORK_FOLDER + downloaderId + File.separator + BENCH_FILE_NAME).delete();
 
         return duration;
     }
@@ -211,27 +206,31 @@ public class Benchmark {
     // ── BenchmarkNodeListener ──────────────────────────────────────────────────
 
     /**
-     * Lightweight {@link NodeListener} used by the downloader node during the
-     * benchmark.  It:
+     * Lightweight {@link NodeListener} used by the downloader node during the benchmark. It:
+     *
      * <ul>
-     *   <li>auto-accepts all incoming connection requests,</li>
-     *   <li>accumulates {@link FileSearchResult} objects from seeder replies,</li>
-     *   <li>groups them by hash and calls {@code node.downloadFiles()} on demand,</li>
-     *   <li>records the precise duration reported by DownloadTasksManager and
-     *       releases the waiting thread via a {@link CountDownLatch}.</li>
+     *   <li>auto-accepts all incoming connection requests,
+     *   <li>accumulates {@link FileSearchResult} objects from seeder replies,
+     *   <li>groups them by hash and calls {@code node.downloadFiles()} on demand,
+     *   <li>records the precise duration reported by DownloadTasksManager and releases the waiting
+     *       thread via a {@link CountDownLatch}.
      * </ul>
      */
     static class BenchmarkNodeListener implements NodeListener {
 
         private Node node;
         private final List<FileSearchResult> collected =
-            Collections.synchronizedList(new ArrayList<>());
-        private final CountDownLatch latch    = new CountDownLatch(1);
-        private volatile long        durationMs = -1;
+                Collections.synchronizedList(new ArrayList<>());
+        private final CountDownLatch latch = new CountDownLatch(1);
+        private volatile long durationMs = -1;
 
-        void setNode(Node node) { this.node = node; }
+        void setNode(Node node) {
+            this.node = node;
+        }
 
-        boolean hasNoResults() { return collected.isEmpty(); }
+        boolean hasNoResults() {
+            return collected.isEmpty();
+        }
 
         void triggerDownload() {
             if (node == null || collected.isEmpty()) return;
@@ -239,9 +238,8 @@ public class Benchmark {
             Map<String, List<FileSearchResult>> byHash = new LinkedHashMap<>();
             synchronized (collected) {
                 for (FileSearchResult r : collected) {
-                    byHash
-                        .computeIfAbsent(Arrays.toString(r.getHash()), k -> new ArrayList<>())
-                        .add(r);
+                    byHash.computeIfAbsent(Arrays.toString(r.getHash()), k -> new ArrayList<>())
+                            .add(r);
                 }
             }
             node.downloadFiles(new ArrayList<>(byHash.values()));
@@ -264,7 +262,8 @@ public class Benchmark {
             Collections.addAll(collected, results);
         }
 
-        @Override public void reloadListModel() {}
+        @Override
+        public void reloadListModel() {}
 
         @Override
         public void startDownloadProgress(byte[] hash, String fileName, int totalBlocks) {}
@@ -321,14 +320,13 @@ public class Benchmark {
         for (Map.Entry<Integer, List<Long>> e : durationsPerSeed.entrySet()) {
             List<Long> d = e.getValue();
             if (d.isEmpty()) {
-                System.out.printf("│ %-6d │ %12s │ %12s │ %12s │%n",
-                    e.getKey(), "n/a", "n/a", "n/a");
+                System.out.printf(
+                        "│ %-6d │ %12s │ %12s │ %12s │%n", e.getKey(), "n/a", "n/a", "n/a");
             } else {
                 long min = d.stream().mapToLong(Long::longValue).min().getAsLong();
                 long max = d.stream().mapToLong(Long::longValue).max().getAsLong();
                 double avg = d.stream().mapToLong(Long::longValue).average().getAsDouble();
-                System.out.printf("│ %-6d │ %12.1f │ %12d │ %12d │%n",
-                    e.getKey(), avg, min, max);
+                System.out.printf("│ %-6d │ %12.1f │ %12d │ %12d │%n", e.getKey(), avg, min, max);
             }
         }
         System.out.println("└────────┴──────────────┴──────────────┴──────────────┘");

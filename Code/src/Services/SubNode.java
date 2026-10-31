@@ -8,7 +8,6 @@ import FileSearch.WordSearchMessage;
 import Messaging.FileBlockAnswerMessage;
 import Messaging.FileBlockRequestMessage;
 import Messaging.NewConnectionRequest;
-
 import java.io.*;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -58,22 +57,20 @@ public class SubNode extends Thread {
                 byte typeId = in.readByte();
                 int length = in.readInt();
                 if (length < 0) throw new IOException("Invalid message length: " + length);
-                
+
                 if (length > Config.MAX_PAYLOAD_SIZE) {
                     throw new IOException("Payload too large: " + length + " bytes");
                 }
 
                 byte[] payload = new byte[length];
                 in.readFully(payload);
-                
+
                 handleIncomingMessage(typeId, payload);
             }
         } catch (EOFException e) {
             System.err.println("End of stream reached unexpectedly.");
         } catch (IOException e) {
-            System.err.println(
-                node.getAddressAndPortFormated() + "IO error: " + e.getMessage()
-            );
+            System.err.println(node.getAddressAndPortFormated() + "IO error: " + e.getMessage());
             // e.printStackTrace(); // Optional: remove if too noisy
         } finally {
             System.err.println("Closed connection for " + node.getAddressAndPortFormated());
@@ -100,12 +97,11 @@ public class SubNode extends Thread {
                 break;
             default:
                 System.out.println(
-                    node.getAddressAndPortFormated() +
-                    "Received unknown message type ID: " + typeId
-                );
+                        node.getAddressAndPortFormated()
+                                + "Received unknown message type ID: "
+                                + typeId);
         }
     }
-
 
     /*
      * Handles a new connection request
@@ -116,20 +112,18 @@ public class SubNode extends Thread {
         this.originalBeforeOSchangePort = request.getClientPort();
 
         if (!outgoingConnection && node.getListener() != null) {
-            boolean accepted = node
-                    .getListener()
-                    .confirmIncomingConnection(
-                            request.getClientAddress().getHostAddress(),
-                            request.getClientPort()
-                    );
+            boolean accepted =
+                    node.getListener()
+                            .confirmIncomingConnection(
+                                    request.getClientAddress().getHostAddress(),
+                                    request.getClientPort());
             if (!accepted) {
                 System.out.println(
-                        node.getAddressAndPortFormated() +
-                                "Rejected incoming connection from " +
-                                request.getClientAddress().getHostAddress() +
-                                ":" +
-                                request.getClientPort()
-                );
+                        node.getAddressAndPortFormated()
+                                + "Rejected incoming connection from "
+                                + request.getClientAddress().getHostAddress()
+                                + ":"
+                                + request.getClientPort());
                 close();
                 return;
             }
@@ -138,12 +132,11 @@ public class SubNode extends Thread {
         logNewConnection();
     }
 
-
     /*
      * Handles a word search message
      * The word search message is used to send the keyword to the node
      * and to send the files that contain the keyword
-     */ 
+     */
     private void handleWordSearchMessage(WordSearchMessage message) {
         /*
         System.out.println(
@@ -154,21 +147,18 @@ public class SubNode extends Thread {
         );
          */
         if (node.getFolder().exists() && node.getFolder().isDirectory()) {
-            sendFileSearchResultList(message); 
+            sendFileSearchResultList(message);
         }
     }
 
-
     /*
      * Handles the file search results
-     * The file search results are used to send the files that contain the keyword  
+     * The file search results are used to send the files that contain the keyword
      */
     private void handleFileSearchResults(FileSearchResult[] results) {
         if (node.getListener() == null) {
             System.out.println(
-                node.getAddressAndPortFormated() +
-                "There was a problem with the GUI"
-            );
+                    node.getAddressAndPortFormated() + "There was a problem with the GUI");
             System.exit(1);
         }
         /*
@@ -204,16 +194,10 @@ public class SubNode extends Thread {
      * And counts down the latch
      */
     private void handleFileBlockAnswer(FileBlockAnswerMessage answer) {
-        int port = Utils.isValidPort(socket.getPort())
-            ? socket.getPort()
-            : originalBeforeOSchangePort;
+        int port =
+                Utils.isValidPort(socket.getPort()) ? socket.getPort() : originalBeforeOSchangePort;
 
-        node.writeBlockToFile(
-            answer.getHash(),
-            socket.getInetAddress(),
-            port,
-            answer
-        );
+        node.writeBlockToFile(answer.getHash(), socket.getInetAddress(), port, answer);
 
         if (blockAnswerLatch != null) {
             blockAnswerLatch.countDown();
@@ -248,17 +232,13 @@ public class SubNode extends Thread {
     public void sendNewConnectionRequest(InetAddress endereco, int thisPort) {
         if (out == null) {
             System.out.println(
-                node.getAddressAndPortFormated() +
-                "OutputStream is null [invalid port: " +
-                thisPort +
-                "]"
-            );
+                    node.getAddressAndPortFormated()
+                            + "OutputStream is null [invalid port: "
+                            + thisPort
+                            + "]");
             return;
         }
-        NewConnectionRequest request = new NewConnectionRequest(
-            endereco,
-            thisPort
-        );
+        NewConnectionRequest request = new NewConnectionRequest(endereco, thisPort);
         sendObject(request);
         logNewConnection();
     }
@@ -308,25 +288,23 @@ public class SubNode extends Thread {
     }
 
     /*
-     * Closes the socket, ends the thread 
+     * Closes the socket, ends the thread
      * and removes the node from the list of peers
-     */  
+     */
     public void close() {
         if (!running) return;
 
         running = false;
 
         closeResources();
-        int port = Utils.isValidPort(socket.getPort())
-            ? socket.getPort()
-            : originalBeforeOSchangePort;
+        int port =
+                Utils.isValidPort(socket.getPort()) ? socket.getPort() : originalBeforeOSchangePort;
         System.out.println(
-            node.getAddressAndPortFormated() +
-            "Thread closed for SubNode at " +
-            socket.getInetAddress().getHostAddress() +
-            ":" +
-            port
-        );
+                node.getAddressAndPortFormated()
+                        + "Thread closed for SubNode at "
+                        + socket.getInetAddress().getHostAddress()
+                        + ":"
+                        + port);
         node.removePeer(this);
     }
 
@@ -338,10 +316,9 @@ public class SubNode extends Thread {
             if (socket != null) socket.close();
         } catch (IOException e) {
             System.out.println(
-                node.getAddressAndPortFormated() +
-                "Error closing resources: " +
-                e.getMessage()
-            );
+                    node.getAddressAndPortFormated()
+                            + "Error closing resources: "
+                            + e.getMessage());
         }
     }
 
@@ -351,17 +328,11 @@ public class SubNode extends Thread {
      */
     private List<String> getIgnoredFileNames() {
         List<String> ignoredFiles = new ArrayList<>();
-        File gitignore = new File(
-            this.node.getFolder().getParentFile().getParentFile(),
-            ".gitignore"
-        );
+        File gitignore =
+                new File(this.node.getFolder().getParentFile().getParentFile(), ".gitignore");
 
         if (gitignore.exists() && gitignore.isFile()) {
-            try (
-                BufferedReader br = new BufferedReader(
-                    new FileReader(gitignore)
-                )
-            ) {
+            try (BufferedReader br = new BufferedReader(new FileReader(gitignore))) {
                 String line;
                 while ((line = br.readLine()) != null) {
                     line = line.trim();
@@ -371,10 +342,9 @@ public class SubNode extends Thread {
                 }
             } catch (IOException e) {
                 System.out.println(
-                    node.getAddressAndPortFormated() +
-                    "Error reading .gitignore: " +
-                    e.getMessage()
-                );
+                        node.getAddressAndPortFormated()
+                                + "Error reading .gitignore: "
+                                + e.getMessage());
             }
         }
         return ignoredFiles;
@@ -393,36 +363,34 @@ public class SubNode extends Thread {
     }
 
     private void logNewConnection() {
-        int port = Utils.isValidPort(originalBeforeOSchangePort)
-            ? originalBeforeOSchangePort
-            : socket.getPort();
+        int port =
+                Utils.isValidPort(originalBeforeOSchangePort)
+                        ? originalBeforeOSchangePort
+                        : socket.getPort();
         System.out.println(
-            node.getAddressAndPortFormated() +
-            "Added new node::NodeAddress [address=" +
-            socket.getInetAddress().getHostAddress() +
-            " port=" +
-            port +
-            "]"
-        );
+                node.getAddressAndPortFormated()
+                        + "Added new node::NodeAddress [address="
+                        + socket.getInetAddress().getHostAddress()
+                        + " port="
+                        + port
+                        + "]");
     }
 
     @Override
     public String toString() {
-        return (
-            "SubNode [originalBeforeOSchangePort=" +
-            originalBeforeOSchangePort +
-            ", socket=" +
-            socket +
-            ", node=" +
-            node +
-            ", listener=" +
-            node.getListener() +
-            ", outgoingConnection=" +
-            outgoingConnection +
-            ", running=" +
-            running +
-            "]"
-        );
+        return ("SubNode [originalBeforeOSchangePort="
+                + originalBeforeOSchangePort
+                + ", socket="
+                + socket
+                + ", node="
+                + node
+                + ", listener="
+                + node.getListener()
+                + ", outgoingConnection="
+                + outgoingConnection
+                + ", running="
+                + running
+                + "]");
     }
 
     @Override
@@ -430,11 +398,9 @@ public class SubNode extends Thread {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         SubNode subNode = (SubNode) obj;
-        return (
-            outgoingConnection &&
-            this.socket.getPort() == subNode.socket.getPort() &&
-            socket.getInetAddress().equals(subNode.getSocket().getInetAddress())
-        );
+        return (outgoingConnection
+                && this.socket.getPort() == subNode.socket.getPort()
+                && socket.getInetAddress().equals(subNode.getSocket().getInetAddress()));
     }
 
     /*
@@ -443,30 +409,22 @@ public class SubNode extends Thread {
      * return false.
      */
     public boolean hasConnectionWith(InetAddress address, int port) {
-        int thisSocketPort = Utils.isValidPort(socket.getPort())
-            ? socket.getPort()
-            : originalBeforeOSchangePort;
-        return (
-            this.socket.getLocalAddress()
-                .getHostAddress()
-                .equals(address.getHostAddress())  &&
-            thisSocketPort == port
-        );
+        int thisSocketPort =
+                Utils.isValidPort(socket.getPort()) ? socket.getPort() : originalBeforeOSchangePort;
+        return (this.socket.getLocalAddress().getHostAddress().equals(address.getHostAddress())
+                && thisSocketPort == port);
     }
 
     @Override
     public int hashCode() {
-        if (outgoingConnection) return Objects.hash(
-            socket.getInetAddress(),
-            socket.getPort()
-        );
+        if (outgoingConnection) return Objects.hash(socket.getInetAddress(), socket.getPort());
         return super.hashCode();
     }
 
     /*
      * Sends a file search result list
-     * The file search result list is used to send the files 
-     * that contain the keyword in the WordSearchMessage message 
+     * The file search result list is used to send the files
+     * that contain the keyword in the WordSearchMessage message
      */
     private void sendFileSearchResultList(WordSearchMessage searchMessage) {
         File[] files = node.getFolder().listFiles();
@@ -478,13 +436,8 @@ public class SubNode extends Thread {
         int keywordCount = countMatchingFiles(files, keyword, filesToIgnore);
         if (keywordCount == 0) return;
 
-        FileSearchResult[] results = createFileSearchResults(
-            files,
-            keyword,
-            filesToIgnore,
-            keywordCount,
-            searchMessage
-        );
+        FileSearchResult[] results =
+                createFileSearchResults(files, keyword, filesToIgnore, keywordCount, searchMessage);
 
         if (results.length == 0) return;
         /*
@@ -510,11 +463,7 @@ public class SubNode extends Thread {
      * Counts the number of files that match the keyword
      * and the files to ignore
      */
-    private int countMatchingFiles(
-        File[] files,
-        String keyword,
-        List<String> filesToIgnore
-    ) {
+    private int countMatchingFiles(File[] files, String keyword, List<String> filesToIgnore) {
         int count = 0;
         for (File file : files) {
             if (isFileMatch(file, keyword, filesToIgnore)) {
@@ -529,28 +478,21 @@ public class SubNode extends Thread {
      * The file matches the keyword if the file name contains the keyword
      * and the file is not in the list of files to ignore.
      */
-    private boolean isFileMatch(
-        File file,
-        String keyword,
-        List<String> filesToIgnore
-    ) {
-        return (
-            file.getName().toLowerCase().contains(keyword) &&
-            !filesToIgnore.contains(file.getName())
-        );
+    private boolean isFileMatch(File file, String keyword, List<String> filesToIgnore) {
+        return (file.getName().toLowerCase().contains(keyword)
+                && !filesToIgnore.contains(file.getName()));
     }
 
     /*
      * Creates the list of file search results that match the given keyword
      * The file search results are used to send the files that contain the keyword
-     */ 
+     */
     private FileSearchResult[] createFileSearchResults(
-        File[] files,
-        String keyword,
-        List<String> filesToIgnore,
-        int resultCount,
-        WordSearchMessage searchMessage
-    ) {
+            File[] files,
+            String keyword,
+            List<String> filesToIgnore,
+            int resultCount,
+            WordSearchMessage searchMessage) {
         FileSearchResult[] results = new FileSearchResult[resultCount];
         int counter = 0;
 
@@ -560,14 +502,14 @@ public class SubNode extends Thread {
                 if (hash == null) {
                     continue;
                 }
-                results[counter++] = new FileSearchResult(
-                    searchMessage,
-                    file.getName(),
-                    hash,
-                    file.length(),
-                    node.getAddress(),
-                    node.getPort()
-                );
+                results[counter++] =
+                        new FileSearchResult(
+                                searchMessage,
+                                file.getName(),
+                                hash,
+                                file.length(),
+                                node.getAddress(),
+                                node.getPort());
             }
         }
         if (counter == results.length) {
@@ -590,9 +532,8 @@ public class SubNode extends Thread {
     }
 
     public int getDestinationPort() {
-        int port = Utils.isValidPort(socket.getPort())
-            ? socket.getPort()
-            : originalBeforeOSchangePort;
+        int port =
+                Utils.isValidPort(socket.getPort()) ? socket.getPort() : originalBeforeOSchangePort;
         return port;
     }
 }

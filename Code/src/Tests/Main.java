@@ -1,7 +1,6 @@
 package Tests;
 
 import Core.Config;
-import Core.Node;
 import GUI.GUI;
 import java.io.File;
 import java.io.IOException;
@@ -14,7 +13,6 @@ public class Main {
     private static int id = -1;
 
     public static void main(String[] args) {
-        
 
         Scanner scanner = new Scanner(System.in);
 
@@ -27,7 +25,7 @@ public class Main {
         while (!validInput) {
             // Read the node ID from user input
             String line = scanner.nextLine().trim();
-            
+
             // Split the line by spaces and add the IDs to the list
             String[] ids = line.split("\\s+");
 
@@ -37,8 +35,8 @@ public class Main {
                 System.err.println("Invalid ID. Please provide only one ID.");
             } else {
                 try {
-                    id = Integer.parseInt(ids[0]);        
-              
+                    id = Integer.parseInt(ids[0]);
+
                     gui = new GUI(id, true);
                     validInput = true;
                 } catch (Exception e) {
@@ -49,25 +47,26 @@ public class Main {
             }
         }
 
-        createDefaultFileStructure(id);   
-        
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                // This block will run before the JVM shuts down
+        createDefaultFileStructure(id);
 
-                String dirToRemove = NODE_FILES_BASE + id;
-                File dirToRemoveFile = new File(dirToRemove);
-              
-                try {
-                    deleteDirectory(dirToRemoveFile);
-                } catch (IOException ex) {
-                    System.err.println("Failed to remove the directory: " + dirToRemoveFile);
-                }
-              
-            }
-        });
+        Runtime.getRuntime()
+                .addShutdownHook(
+                        new Thread() {
+                            @Override
+                            public void run() {
+                                // This block will run before the JVM shuts down
 
+                                String dirToRemove = NODE_FILES_BASE + id;
+                                File dirToRemoveFile = new File(dirToRemove);
+
+                                try {
+                                    deleteDirectory(dirToRemoveFile);
+                                } catch (IOException ex) {
+                                    System.err.println(
+                                            "Failed to remove the directory: " + dirToRemoveFile);
+                                }
+                            }
+                        });
 
         if (gui == null) {
             System.err.println("Failed to create node.");
@@ -91,7 +90,8 @@ public class Main {
                         deleteDirectory(file);
                     } else {
                         if (!file.delete()) {
-                            throw new IOException("Failed to delete file: " + file.getAbsolutePath());
+                            throw new IOException(
+                                    "Failed to delete file: " + file.getAbsolutePath());
                         }
                     }
                 }
@@ -119,7 +119,7 @@ public class Main {
         }
     }
 
-    private static void createDefaultFileStructure(int arg)  {
+    private static void createDefaultFileStructure(int arg) {
         String dirToRemove = NODE_FILES_BASE + arg;
         File removeDir = new File(dirToRemove);
         if (removeDir.exists() && removeDir.isDirectory()) {
@@ -130,7 +130,7 @@ public class Main {
                 System.exit(1);
             }
         }
-    
+
         String dirToCreate = DEFAULT_FILE_STRUCTURE + "/dl" + arg;
         File createDir = new File(dirToCreate);
         if (createDir.exists() && createDir.isDirectory()) {
@@ -142,16 +142,17 @@ public class Main {
             }
         } else {
             System.out.println("Argument folder not found in default structure: " + arg);
-            
+
             // Create the directory in the PROJECT_DIR if it doesn't exist
             File newDir = new File(NODE_FILES_BASE + arg);
             if (!newDir.exists()) {
                 boolean created = newDir.mkdirs(); // Create the directory
                 if (!created) {
-                    System.err.println("Failed to create the directory: " + newDir.getAbsolutePath());
+                    System.err.println(
+                            "Failed to create the directory: " + newDir.getAbsolutePath());
                     System.exit(1);
-                } 
+                }
             }
         }
-    }    
+    }
 }

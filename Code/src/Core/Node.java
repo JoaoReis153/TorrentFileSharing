@@ -11,8 +11,8 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -37,7 +37,7 @@ public class Node {
     private Map<String, byte[]> hashes;
 
     private final ExecutorService downloadTaskManagersThreadPool =
-        Executors.newFixedThreadPool(Config.MAX_CONCURRENT_DOWNLOADS);
+            Executors.newFixedThreadPool(Config.MAX_CONCURRENT_DOWNLOADS);
 
     public Node(int nodeId, NodeListener listener) {
         this.hashes = new ConcurrentHashMap<>();
@@ -59,10 +59,7 @@ public class Node {
      */
     public SubNode getPeerToSend(String address, int port) {
         for (SubNode peer : peers) {
-            if (
-                peer.getDestinationAddress().equals(address) &&
-                peer.getDestinationPort() == port
-            ) {
+            if (peer.getDestinationAddress().equals(address) && peer.getDestinationPort() == port) {
                 return peer;
             }
         }
@@ -73,7 +70,7 @@ public class Node {
      * Initializes the senders for the node
      * The senders are responsible for answering the requests
      * from other nodes with a reply that contains the requested part of the file
-     */ 
+     */
     private void initializeSenders(int n) {
         if (n <= 0) return;
 
@@ -83,17 +80,18 @@ public class Node {
         }
     }
 
-
     /*
      *  Use the already created method to check the ID
      *  And throw an exception if it's not valid
      */
-    private void validateId() { 
+    private void validateId() {
         if (!Utils.isValidID(this.nodeId)) {
             throw new IllegalArgumentException(
-                "Invalid node ID. Input a valid number (" +
-                Config.MIN_NODE_ID + "-" + Config.MAX_NODE_ID + ")"
-            );
+                    "Invalid node ID. Input a valid number ("
+                            + Config.MIN_NODE_ID
+                            + "-"
+                            + Config.MAX_NODE_ID
+                            + ")");
         }
     }
 
@@ -105,10 +103,7 @@ public class Node {
         File folder = new File(Config.WORK_FOLDER + nodeId);
         if (!folder.exists() && !folder.mkdirs()) {
             throw new RuntimeException(
-                getAddressAndPortFormated() +
-                "Failed to create directory: dl" +
-                nodeId
-            );
+                    getAddressAndPortFormated() + "Failed to create directory: dl" + nodeId);
         }
         return folder;
     }
@@ -119,9 +114,10 @@ public class Node {
      */
     private InetAddress initializeAddress() {
         try {
-            return Core.Utils.getLocalIPAddress() ;
+            return Core.Utils.getLocalIPAddress();
         } catch (Exception e) {
-            throw new RuntimeException(  getAddressAndPortFormated() + " Unable to get the device's address", e);
+            throw new RuntimeException(
+                    getAddressAndPortFormated() + " Unable to get the device's address", e);
         }
     }
 
@@ -131,9 +127,7 @@ public class Node {
      * and creating a new handler for each connection
      */
     public void startServing() {
-        System.out.println(
-            getAddressAndPortFormated() + "Awaiting connection..."
-        );
+        System.out.println(getAddressAndPortFormated() + "Awaiting connection...");
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -143,25 +137,19 @@ public class Node {
             }
         } catch (IOException e) {
             throw new RuntimeException(
-                getAddressAndPortFormated() +
-                "Failed to start server: " +
-                e.getMessage()
-            );
+                    getAddressAndPortFormated() + "Failed to start server: " + e.getMessage());
         }
     }
 
     // Add a new request to the list of requests to process
-    public synchronized void addElementToBlocksToProcess(
-        FileBlockRequestMessage request
-    ) {
+    public synchronized void addElementToBlocksToProcess(FileBlockRequestMessage request) {
         blocksToProcess.add(request);
         notifyAll();
     }
 
     // Remove a request from the list of requests to process
-    public synchronized void removeElementFromBlocksToProcess(
-        FileBlockRequestMessage request
-    ) throws InterruptedException {
+    public synchronized void removeElementFromBlocksToProcess(FileBlockRequestMessage request)
+            throws InterruptedException {
         while (blocksToProcess.isEmpty()) wait();
         blocksToProcess.remove(request);
     }
@@ -175,9 +163,9 @@ public class Node {
         try {
             InetAddress targetInetAddress = resolveAddress(targetAddress);
 
-             
             // Check if the connection is valid
-            // The valid connection method alreadys throws exceptions accordingly to the type of error
+            // The valid connection method alreadys throws exceptions accordingly to the type of
+            // error
             if (!isValidConnection(targetInetAddress, targetPort)) {
                 return;
             }
@@ -193,7 +181,7 @@ public class Node {
      * Resolves the address of a node
      * The address is resolved by using the InetAddress.getByName method
      * and checking if the resolved address is null
-     * 
+     *
      * This method will be called when trying to connect to a node
      */
     private InetAddress resolveAddress(String address) {
@@ -204,9 +192,7 @@ public class Node {
             }
             return resolved;
         } catch (IOException e) {
-            throw new IllegalArgumentException(
-                "Unable to resolve address: " + address
-            );
+            throw new IllegalArgumentException("Unable to resolve address: " + address);
         }
     }
 
@@ -216,34 +202,25 @@ public class Node {
      * 1. Invalid port range
      * 2. Connection already exists
      * 3. Unable to resolve the address
-     * 
+     *
      * Otherwise, the connection is valid
      */
-    private boolean isValidConnection(
-        InetAddress targetAddress,
-        int targetPort
-    ) {
+    private boolean isValidConnection(InetAddress targetAddress, int targetPort) {
         if (!Utils.isValidPort(targetPort)) {
             System.out.println(
-                getAddressAndPortFormated() +
-                "Failed to connect: Invalid port range"
-            );
+                    getAddressAndPortFormated() + "Failed to connect: Invalid port range");
             return false;
         }
 
         if (targetAddress.equals(this.address) && targetPort == this.port) {
             System.out.println(
-                getAddressAndPortFormated() +
-                "Failed to connect: Cannot connect to itself"
-            );
+                    getAddressAndPortFormated() + "Failed to connect: Cannot connect to itself");
             return false;
         }
 
         if (isAlreadyConnected(targetAddress, targetPort)) {
             System.out.println(
-                getAddressAndPortFormated() +
-                "Failed to connect: Connection already exists"
-            );
+                    getAddressAndPortFormated() + "Failed to connect: Connection already exists");
             return false;
         }
 
@@ -254,16 +231,11 @@ public class Node {
      * Checks if a connection with a node already exists
      * The connection is checked by comparing the address and port of the connection
      */
-    private boolean isAlreadyConnected(
-        InetAddress targetAddress,
-        int targetPort
-    ) {
+    private boolean isAlreadyConnected(InetAddress targetAddress, int targetPort) {
         for (SubNode peer : peers) {
-            if (
-                (peer.getSocket().getInetAddress().equals(targetAddress) &&
-                    peer.getSocket().getPort() == targetPort) ||
-                peer.getOriginalBeforeOSchangePort() == targetPort
-            ) {
+            if ((peer.getSocket().getInetAddress().equals(targetAddress)
+                            && peer.getSocket().getPort() == targetPort)
+                    || peer.getOriginalBeforeOSchangePort() == targetPort) {
                 return true;
             }
         }
@@ -275,10 +247,7 @@ public class Node {
      * The connection is made by creating a new handler for the connection
      * and adding it to the list of peers
      */
-    private void establishConnection(
-        InetAddress targetAddress,
-        int targetPort
-    ) {
+    private void establishConnection(InetAddress targetAddress, int targetPort) {
         try {
             Socket clientSocket = new Socket(targetAddress, targetPort);
             SubNode handler = new SubNode(this, clientSocket, true);
@@ -288,20 +257,22 @@ public class Node {
             Thread.sleep(Config.CONNECTION_SETUP_DELAY_MS);
             handler.sendNewConnectionRequest(address, port);
         } catch (IOException e) {
-            System.err.println( getAddressAndPortFormated() +
-                "Failed to establish connection: " + e.getMessage()
-            );
+            System.err.println(
+                    getAddressAndPortFormated()
+                            + "Failed to establish connection: "
+                            + e.getMessage());
         } catch (InterruptedException e) {
-            System.err.println( getAddressAndPortFormated() + 
-                "Failed to establish connection: " + e.getMessage()
-            );
+            System.err.println(
+                    getAddressAndPortFormated()
+                            + "Failed to establish connection: "
+                            + e.getMessage());
         }
     }
 
     /*
      * Broadcasts a word search message request to all peers
      * The message is sent to all peers in the list of peers
-     * 
+     *
      * That each wil eventually send a FileSearchResult list with the files they have locally that contain the keyword
      */
     public void broadcastWordSearchMessageRequest(String keyword) {
@@ -310,20 +281,15 @@ public class Node {
 
     public void downloadFiles(List<List<FileSearchResult>> filesToDownload) {
         for (List<FileSearchResult> file : filesToDownload) {
-            //Check if it's already downloading the file
+            // Check if it's already downloading the file
             String hashKey = hashKey(file.get(0).getHash());
             if (downloadManagers.containsKey(hashKey)) continue;
 
             // Check if already has the file in the directory
             if (hasFileWithHash(file.get(0).getHash())) continue;
             FileSearchResult example = file.get(0);
-            System.out.println(
-                getAddressAndPortFormated() + "Request file: " + example
-            );
-            DownloadTasksManager downloadManager = new DownloadTasksManager(
-                this,
-                file
-            );
+            System.out.println(getAddressAndPortFormated() + "Request file: " + example);
+            DownloadTasksManager downloadManager = new DownloadTasksManager(this, file);
             downloadTaskManagersThreadPool.execute(downloadManager);
             downloadManagers.put(hashKey, downloadManager);
         }
@@ -335,29 +301,28 @@ public class Node {
      * In this project, the hashes are used to identify the files
      */
     public void loadHashes() {
-        new Thread(() -> {
-            if (folder == null || !folder.exists() || !folder.isDirectory()) return;
+        new Thread(
+                        () -> {
+                            if (folder == null || !folder.exists() || !folder.isDirectory()) return;
 
-            File[] files = folder.listFiles();
-            if (files == null) return;
+                            File[] files = folder.listFiles();
+                            if (files == null) return;
 
-            for (File file : files) {
-                try {
-                    hashes.put(
-                        file.getAbsolutePath(),
-                        Utils.calculateFileHash(file.getAbsolutePath())
-                    );
-                } catch (RuntimeException e) {
-                    System.err.println(
-                        getAddressAndPortFormated() +
-                        " Failed to load hash for file: " +
-                        file.getAbsolutePath()
-                    );
-                }
-            }
-        }).start();
+                            for (File file : files) {
+                                try {
+                                    hashes.put(
+                                            file.getAbsolutePath(),
+                                            Utils.calculateFileHash(file.getAbsolutePath()));
+                                } catch (RuntimeException e) {
+                                    System.err.println(
+                                            getAddressAndPortFormated()
+                                                    + " Failed to load hash for file: "
+                                                    + file.getAbsolutePath());
+                                }
+                            }
+                        })
+                .start();
     }
-
 
     /*
      * Checks if there are any hashes that are not in the working directory
@@ -399,10 +364,9 @@ public class Node {
                 return hash;
             } catch (RuntimeException e) {
                 System.err.println(
-                    getAddressAndPortFormated() +
-                    " Failed to calculate hash for file: " +
-                    filePath
-                );
+                        getAddressAndPortFormated()
+                                + " Failed to calculate hash for file: "
+                                + filePath);
                 return null;
             }
         }
@@ -430,8 +394,7 @@ public class Node {
     }
 
     // Returns the first request in the list of requests to process
-    public synchronized FileBlockRequestMessage getBlockRequest()
-        throws InterruptedException {
+    public synchronized FileBlockRequestMessage getBlockRequest() throws InterruptedException {
         while (blocksToProcess.isEmpty()) wait();
         return blocksToProcess.remove(0);
     }
@@ -458,34 +421,26 @@ public class Node {
      * to know how many answers has each peer sent
      */
     public void writeBlockToFile(
-        byte[] hash,
-        InetAddress address,
-        int port,
-        FileBlockAnswerMessage answer
-    ) {
+            byte[] hash, InetAddress address, int port, FileBlockAnswerMessage answer) {
         DownloadTasksManager downloadManager = downloadManagers.get(hashKey(hash));
         if (downloadManager == null) return;
         downloadManager.addDownloadAnswer(answer);
-        downloadManager
-            .addNumberOfDownloadsForPeer(
-                address.getHostAddress() + ":" + port,
-                1
-            );
+        downloadManager.addNumberOfDownloadsForPeer(address.getHostAddress() + ":" + port, 1);
     }
 
     // Remove a peer from the list of peers
     public void removePeer(SubNode peer) {
         peers.remove(peer);
-        int port = Utils.isValidPort(peer.getSocket().getPort())
-            ? peer.getSocket().getPort()
-            : peer.getOriginalBeforeOSchangePort();
+        int port =
+                Utils.isValidPort(peer.getSocket().getPort())
+                        ? peer.getSocket().getPort()
+                        : peer.getOriginalBeforeOSchangePort();
         System.out.println(
-            getAddressAndPortFormated() +
-            "Removed connection with: " +
-            peer.getSocket().getInetAddress().getHostAddress() +
-            "::" +
-            port
-        );
+                getAddressAndPortFormated()
+                        + "Removed connection with: "
+                        + peer.getSocket().getInetAddress().getHostAddress()
+                        + "::"
+                        + port);
     }
 
     public File getFolder() {

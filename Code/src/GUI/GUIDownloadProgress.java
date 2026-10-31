@@ -61,37 +61,39 @@ public class GUIDownloadProgress {
     }
 
     public void open() {
-        SwingUtilities.invokeLater(() -> {
-            frame.setVisible(gui.getSHOW());
-        });
+        SwingUtilities.invokeLater(
+                () -> {
+                    frame.setVisible(gui.getSHOW());
+                });
     }
 
     public void updateProgress(int completedBlocks) {
         int safeCompleted = Math.max(0, Math.min(completedBlocks, totalBlocks));
         int percent = (int) ((safeCompleted * 100L) / totalBlocks);
 
-        SwingUtilities.invokeLater(() -> {
-            progressBar.setValue(percent);
-            detailsLabel.setText(
-                percent + "% (" + safeCompleted + "/" + totalBlocks + " blocks)"
-            );
-        });
+        SwingUtilities.invokeLater(
+                () -> {
+                    progressBar.setValue(percent);
+                    detailsLabel.setText(
+                            percent + "% (" + safeCompleted + "/" + totalBlocks + " blocks)");
+                });
     }
 
     public void finish(long durationInMiliseconds, Map<String, Integer> nodesNBlocks) {
         String readableTime = formatTime(durationInMiliseconds);
         String summaryHtml = buildStatsHtml(nodesNBlocks, readableTime);
 
-        SwingUtilities.invokeLater(() -> {
-            titleLabel.setText("Download finished: " + fileName);
-            progressBar.setValue(100);
-            detailsLabel.setText("100% (" + totalBlocks + "/" + totalBlocks + " blocks)");
-            statsLabel.setText(summaryHtml);
+        SwingUtilities.invokeLater(
+                () -> {
+                    titleLabel.setText("Download finished: " + fileName);
+                    progressBar.setValue(100);
+                    detailsLabel.setText("100% (" + totalBlocks + "/" + totalBlocks + " blocks)");
+                    statsLabel.setText(summaryHtml);
 
-            Timer closeTimer = new Timer(3500, event -> frame.dispose());
-            closeTimer.setRepeats(false);
-            closeTimer.start();
-        });
+                    Timer closeTimer = new Timer(3500, event -> frame.dispose());
+                    closeTimer.setRepeats(false);
+                    closeTimer.start();
+                });
     }
 
     public void close() {
@@ -122,13 +124,12 @@ public class GUIDownloadProgress {
             sb.append("No peer block stats available");
         } else {
             for (Map.Entry<String, Integer> entry : new TreeMap<>(nodesNBlocks).entrySet()) {
-                sb
-                    .append("NodeAddress [address=")
-                    .append(entry.getKey())
-                    .append("]: ")
-                    .append(entry.getValue())
-                    .append(" downloads")
-                    .append("<br/>");
+                sb.append("NodeAddress [address=")
+                        .append(entry.getKey())
+                        .append("]: ")
+                        .append(entry.getValue())
+                        .append(" downloads")
+                        .append("<br/>");
             }
         }
 

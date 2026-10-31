@@ -14,17 +14,10 @@ import java.util.Arrays;
 /**
  * Result of a file search containing file metadata and the node hosting it.
  *
- * Wire layout (single item):
- *   [String: fileName]
- *   [byte[]: hash]
- *   [long: fileSize]
- *   [InetAddress: address]
- *   [int: port]
- *   [int: displayNumber]
+ * <p>Wire layout (single item): [String: fileName] [byte[]: hash] [long: fileSize] [InetAddress:
+ * address] [int: port] [int: displayNumber]
  *
- * Wire layout (array):
- *   [int: length]
- *   [items...]
+ * <p>Wire layout (array): [int: length] [items...]
  */
 public class FileSearchResult implements Comparable<FileSearchResult> {
 
@@ -39,13 +32,12 @@ public class FileSearchResult implements Comparable<FileSearchResult> {
     private int displayNumber;
 
     public FileSearchResult(
-        WordSearchMessage searchMessage,
-        String fileName,
-        byte[] hash,
-        long fileSize,
-        InetAddress address,
-        int port
-    ) {
+            WordSearchMessage searchMessage,
+            String fileName,
+            byte[] hash,
+            long fileSize,
+            InetAddress address,
+            int port) {
         this.searchMessage = searchMessage;
         this.fileName = fileName;
         this.hash = hash;
@@ -144,9 +136,7 @@ public class FileSearchResult implements Comparable<FileSearchResult> {
 
     @Override
     public String toString() {
-        return displayNumber == 0
-            ? fileName
-            : fileName + " (" + displayNumber + ")";
+        return displayNumber == 0 ? fileName : fileName + " (" + displayNumber + ")";
     }
 
     @Override

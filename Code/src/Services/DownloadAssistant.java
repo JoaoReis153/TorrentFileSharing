@@ -12,23 +12,21 @@ public class DownloadAssistant extends Thread {
     private int timeoutCount;
 
     public DownloadAssistant(
-        DownloadTasksManager taskManager,
-        CountDownLatch latch,
-        SubNode peerToRequestBlock,
-        int ID
-    ) {
+            DownloadTasksManager taskManager,
+            CountDownLatch latch,
+            SubNode peerToRequestBlock,
+            int ID) {
         this.timeoutCount = 0;
         this.taskManager = taskManager;
         this.peerToRequestBlock = peerToRequestBlock;
     }
 
-
     /*
      * While the taskManager still has requests to be processed (its not finished) and the timedOut flag is false
-     * 
+     *
      * It takes a block request message from the taskManager and sends it to the peer to request the
-     * and waits for the answer to arrive. 
-     * 
+     * and waits for the answer to arrive.
+     *
      */
     @Override
     public void run() {
@@ -40,21 +38,22 @@ public class DownloadAssistant extends Thread {
                     handleRequest(request);
                 }
             } catch (InterruptedException e) {
-                System.out.println(taskManager.getNode().getAddressAndPortFormated() + " [taskmanager] [downloadassistant] Error in DownloadAssistant");
+                System.out.println(
+                        taskManager.getNode().getAddressAndPortFormated()
+                                + " [taskmanager] [downloadassistant] Error in DownloadAssistant");
                 e.printStackTrace();
             }
         }
     }
 
-
     /*
      * Handles a block request message
-     * 
+     *
      * It takes a block request message and sends it to the peer to request the
-     * and waits for the answer to arrive. 
-     * 
+     * and waits for the answer to arrive.
+     *
      * In case the answer is not received within the timeout, it returns the request back to the taskManager
-     * 
+     *
      * And in case the number of timeouts exceeds the maximum, it stops the download assistant
      */
     private void handleRequest(FileBlockRequestMessage request) {
@@ -70,23 +69,22 @@ public class DownloadAssistant extends Thread {
         }
     }
 
-
     /*
      * Waits for a block answer message
-     * 
-     * It takes a block request message and waits for the 
+     *
+     * It takes a block request message and waits for the
      * block answer message corresponding to the request to arrive.
-     * 
+     *
      * In case the answer is not received within the timeout, it returns false.
      */
-    private boolean waitForAnswer(
-        FileBlockRequestMessage request
-    ) {
+    private boolean waitForAnswer(FileBlockRequestMessage request) {
         try {
             return taskManager.waitForBlock(request, Config.BLOCK_ANSWER_TIMEOUT_MS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt(); // Restore interrupted status
-            System.out.println( taskManager.getNode().getAddressAndPortFormated() + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
+            System.out.println(
+                    taskManager.getNode().getAddressAndPortFormated()
+                            + " [taskmanager] [downloadassistant] Interrupted while waiting for answer");
             return false; // Handle interruption as a failure
         }
     }

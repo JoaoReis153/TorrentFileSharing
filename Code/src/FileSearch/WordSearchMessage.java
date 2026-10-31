@@ -10,8 +10,7 @@ import java.io.IOException;
 /**
  * Message sent to request a word search across the network.
  *
- * Wire layout:
- *   [String: keyword]
+ * <p>Wire layout: [String: keyword]
  */
 public class WordSearchMessage {
 

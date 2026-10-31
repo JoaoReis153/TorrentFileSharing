@@ -1,5 +1,8 @@
 package GUI;
 
+import Core.Node;
+import Core.NodeListener;
+import FileSearch.FileSearchResult;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -15,7 +18,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
@@ -29,10 +31,6 @@ import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
-
-import Core.Node;
-import Core.NodeListener;
-import FileSearch.FileSearchResult;
 
 public class GUI implements NodeListener {
 
@@ -56,7 +54,6 @@ public class GUI implements NodeListener {
         createGUI();
     }
 
-
     public GUI(int nodeId, boolean show) {
         this.node = new Node(nodeId, this);
         this.activeDownloadProgress = new HashMap<>();
@@ -66,13 +63,13 @@ public class GUI implements NodeListener {
     }
 
     private void createGUI() {
-        frame = new JFrame(
-            "Port NodeAddress [ address " +
-            node.getAddress().getHostAddress() +
-            ":" +
-            node.getPort() +
-            " ]"
-        );
+        frame =
+                new JFrame(
+                        "Port NodeAddress [ address "
+                                + node.getAddress().getHostAddress()
+                                + ":"
+                                + node.getPort()
+                                + " ]");
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         addFrameContent();
         frame.pack();
@@ -88,15 +85,16 @@ public class GUI implements NodeListener {
         if (this.isOpen) return;
         this.isOpen = true;
 
-        new Thread(() -> {
-            try {
-                node.startServing();
-            } catch (Exception e) {
-                System.err.println("Failed to start server: " + e.getMessage());
-                frame.dispose();
-            }
-        }).start();
-
+        new Thread(
+                        () -> {
+                            try {
+                                node.startServing();
+                            } catch (Exception e) {
+                                System.err.println("Failed to start server: " + e.getMessage());
+                                frame.dispose();
+                            }
+                        })
+                .start();
 
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         int x = (screenSize.width - frame.getWidth()) / 2;
@@ -129,18 +127,13 @@ public class GUI implements NodeListener {
         JPanel leftArea = new JPanel();
         leftArea.setPreferredSize(new Dimension(300, 150));
         leftArea.setBorder(
-            BorderFactory.createTitledBorder(
-                BorderFactory.createLineBorder(Color.BLACK),
-                "Files in the network:"
-            )
-        );
+                BorderFactory.createTitledBorder(
+                        BorderFactory.createLineBorder(Color.BLACK), "Files in the network:"));
 
         allFiles = new ArrayList<>();
         listModel = new DefaultListModel<>();
         fileList = new JList<>(listModel);
-        fileList.setSelectionMode(
-            ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
-        );
+        fileList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         JScrollPane scrollPane = new JScrollPane(fileList);
         leftArea.setLayout(new BorderLayout());
@@ -148,17 +141,12 @@ public class GUI implements NodeListener {
 
         JPanel currentFolderPanel = new JPanel(new BorderLayout());
         currentFolderPanel.setPreferredSize(new Dimension(240, 150));
-        currentFolderPanel.setBorder(
-            BorderFactory.createTitledBorder("Current Folder Files")
-        );
+        currentFolderPanel.setBorder(BorderFactory.createTitledBorder("Current Folder Files"));
 
         currentFolderFilesModel = new DefaultListModel<>();
         currentFolderFileList = new JList<>(currentFolderFilesModel);
         currentFolderFileList.setFocusable(false);
-        currentFolderPanel.add(
-            new JScrollPane(currentFolderFileList),
-            BorderLayout.CENTER
-        );
+        currentFolderPanel.add(new JScrollPane(currentFolderFileList), BorderLayout.CENTER);
 
         JPanel rightButtonsPanel = new JPanel();
         rightButtonsPanel.setLayout(new GridLayout(2, 1, 10, 10));
@@ -179,57 +167,51 @@ public class GUI implements NodeListener {
         frame.add(bottomPanel, BorderLayout.CENTER);
 
         connectButton.addActionListener(
-            new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    GUINode newNodeWindow = new GUINode(GUI.this);
-                    newNodeWindow.open();
-                }
-            }
-        );
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        GUINode newNodeWindow = new GUINode(GUI.this);
+                        newNodeWindow.open();
+                    }
+                });
 
         downloadButton.addActionListener(
-            new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    List<FileSearchResult> selectedOptions =
-                        fileList.getSelectedValuesList();
-                    List<List<FileSearchResult>> filesToDownload =
-                        new ArrayList<>();
-                    for (FileSearchResult option : selectedOptions) {
-                        List<FileSearchResult> searchResultOfDifferentNodes =
-                            new ArrayList<FileSearchResult>();
-                        for (FileSearchResult searchResult : allFiles) {
-                            if (option.equals(searchResult)) {
-                                searchResultOfDifferentNodes.add(searchResult);
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        List<FileSearchResult> selectedOptions = fileList.getSelectedValuesList();
+                        List<List<FileSearchResult>> filesToDownload = new ArrayList<>();
+                        for (FileSearchResult option : selectedOptions) {
+                            List<FileSearchResult> searchResultOfDifferentNodes =
+                                    new ArrayList<FileSearchResult>();
+                            for (FileSearchResult searchResult : allFiles) {
+                                if (option.equals(searchResult)) {
+                                    searchResultOfDifferentNodes.add(searchResult);
+                                }
                             }
+                            filesToDownload.add(searchResultOfDifferentNodes);
                         }
-                        filesToDownload.add(searchResultOfDifferentNodes);
+
+                        node.downloadFiles(filesToDownload);
                     }
-                    
-                    node.downloadFiles(filesToDownload);
-                }
-            }
-        );
+                });
 
         searchButton.addActionListener(
-            new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    listModel.clear();
-                    allFiles.clear();
-                    String searchText = searchTextField.getText().toLowerCase();
-                    node.broadcastWordSearchMessageRequest(searchText);
-                    System.out.println(
-                        node.getAddressAndPortFormated() +
-                        "Search request sent for keyword: [" +
-                        searchText +
-                        "]"
-                    );
-                    lastSearchKeyword = searchText;
-                }
-            }
-        );
+                new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent e) {
+                        listModel.clear();
+                        allFiles.clear();
+                        String searchText = searchTextField.getText().toLowerCase();
+                        node.broadcastWordSearchMessageRequest(searchText);
+                        System.out.println(
+                                node.getAddressAndPortFormated()
+                                        + "Search request sent for keyword: ["
+                                        + searchText
+                                        + "]");
+                        lastSearchKeyword = searchText;
+                    }
+                });
     }
 
     /*
@@ -240,9 +222,7 @@ public class GUI implements NodeListener {
     public void simulateDownloadButton(List<FileSearchResult> options) {
         List<List<FileSearchResult>> filesToDownload = new ArrayList<>();
         for (FileSearchResult option : options) {
-            List<FileSearchResult> searchResultOfDifferentNodes = new ArrayList<
-                FileSearchResult
-            >();
+            List<FileSearchResult> searchResultOfDifferentNodes = new ArrayList<FileSearchResult>();
             for (FileSearchResult searchResult : allFiles) {
                 if (option.equals(searchResult)) {
                     searchResultOfDifferentNodes.add(searchResult);
@@ -255,7 +235,7 @@ public class GUI implements NodeListener {
 
     /*
      * Reloads the list model
-     * The list model is reloaded by sending a new word search message request 
+     * The list model is reloaded by sending a new word search message request
      * with the previous searched word to all the nodes
      */
     @Override
@@ -282,14 +262,15 @@ public class GUI implements NodeListener {
             for (File file : files) {
                 FileSearchResult fileSearchResult = new FileSearchResult(file, node);
                 allFiles.add(fileSearchResult);
-                if(!localFiles.contains(fileSearchResult)) {
+                if (!localFiles.contains(fileSearchResult)) {
                     localFiles.add(fileSearchResult);
-                };
+                }
+                ;
             }
         }
 
         refreshCurrentFolderFilesList();
-        
+
         ArrayList<FileSearchResult> aux = new ArrayList<>();
 
         for (FileSearchResult searchResult : list) {
@@ -299,13 +280,13 @@ public class GUI implements NodeListener {
             allFiles.add(searchResult);
         }
 
-
-        SwingUtilities.invokeLater(() -> {
-            for (FileSearchResult searchResult : aux) {
-                searchResult.setDisplayNumber(countOccurrencesInAllFiles(searchResult));
-                listModel.addElement(searchResult);
-            }
-        });
+        SwingUtilities.invokeLater(
+                () -> {
+                    for (FileSearchResult searchResult : aux) {
+                        searchResult.setDisplayNumber(countOccurrencesInAllFiles(searchResult));
+                        listModel.addElement(searchResult);
+                    }
+                });
     }
 
     public ArrayList<FileSearchResult> getListModel() {
@@ -317,17 +298,9 @@ public class GUI implements NodeListener {
     }
 
     @Override
-    public synchronized void startDownloadProgress(
-        byte[] hash,
-        String fileName,
-        int totalBlocks
-    ) {
+    public synchronized void startDownloadProgress(byte[] hash, String fileName, int totalBlocks) {
         String hashKey = hashKey(hash);
-        GUIDownloadProgress progressWindow = new GUIDownloadProgress(
-            this,
-            fileName,
-            totalBlocks
-        );
+        GUIDownloadProgress progressWindow = new GUIDownloadProgress(this, fileName, totalBlocks);
         activeDownloadProgress.put(hashKey, progressWindow);
         progressWindow.open();
     }
@@ -350,10 +323,7 @@ public class GUI implements NodeListener {
 
     @Override
     public synchronized void completeDownloadProgress(
-        byte[] hash,
-        long durationInMiliseconds,
-        Map<String, Integer> nodesNBlocks
-    ) {
+            byte[] hash, long durationInMiliseconds, Map<String, Integer> nodesNBlocks) {
         GUIDownloadProgress progressWindow = activeDownloadProgress.remove(hashKey(hash));
         if (progressWindow != null) {
             progressWindow.finish(durationInMiliseconds, nodesNBlocks);
@@ -364,16 +334,21 @@ public class GUI implements NodeListener {
     public boolean confirmIncomingConnection(String address, int port) {
         if (!SHOW) return true;
 
-        final int[] userChoice = new int[] { JOptionPane.NO_OPTION };
-        Runnable promptTask = () -> {
-            userChoice[0] = JOptionPane.showConfirmDialog(
-                frame,
-                "Incoming connection from " + address + ":" + port + "\nAccept connection?",
-                "Incoming Connection",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
-            );
-        };
+        final int[] userChoice = new int[] {JOptionPane.NO_OPTION};
+        Runnable promptTask =
+                () -> {
+                    userChoice[0] =
+                            JOptionPane.showConfirmDialog(
+                                    frame,
+                                    "Incoming connection from "
+                                            + address
+                                            + ":"
+                                            + port
+                                            + "\nAccept connection?",
+                                    "Incoming Connection",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.QUESTION_MESSAGE);
+                };
 
         try {
             if (SwingUtilities.isEventDispatchThread()) {
@@ -411,17 +386,18 @@ public class GUI implements NodeListener {
 
         Collections.sort(fileNames, String.CASE_INSENSITIVE_ORDER);
 
-        SwingUtilities.invokeLater(() -> {
-            currentFolderFilesModel.clear();
-            if (fileNames.isEmpty()) {
-                currentFolderFilesModel.addElement("(no files in current folder)");
-                return;
-            }
+        SwingUtilities.invokeLater(
+                () -> {
+                    currentFolderFilesModel.clear();
+                    if (fileNames.isEmpty()) {
+                        currentFolderFilesModel.addElement("(no files in current folder)");
+                        return;
+                    }
 
-            for (String fileName : fileNames) {
-                currentFolderFilesModel.addElement(fileName);
-            }
-        });
+                    for (String fileName : fileNames) {
+                        currentFolderFilesModel.addElement(fileName);
+                    }
+                });
     }
 
     /*

@@ -8,8 +8,6 @@ import Messaging.FileBlockRequestMessage;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +15,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,47 +43,38 @@ public class DownloadTasksManager extends Thread {
         this.fileInfo = requests.get(0);
 
         System.out.println(
-            node.getAddressAndPortFormated() +
-            "[taskmanager]" +
-            "Download task manager created for file " +
-            fileInfo.getHash()
-        );
+                node.getAddressAndPortFormated()
+                        + "[taskmanager]"
+                        + "Download task manager created for file "
+                        + fileInfo.getHash());
         this.completedRequests = new HashSet<FileBlockRequestMessage>();
         this.numberOfDownloadsForPeer = new HashMap<>();
-        this.requestList = FileBlockRequestMessage.createBlockList(
-            fileInfo.getHash(),
-            fileInfo.getFileSize()
-        );
+        this.requestList =
+                FileBlockRequestMessage.createBlockList(fileInfo.getHash(), fileInfo.getFileSize());
         this.totalBlocks = requestList.size();
         this.completedBlocks = 0;
         this.peersWithFile = getNodesWithFile();
         this.destinationFile = new File(buildFilePath(fileInfo.getFileName()));
 
-        //In case there are no nodes with the file, return
-        if(peersWithFile.isEmpty()) {
+        // In case there are no nodes with the file, return
+        if (peersWithFile.isEmpty()) {
             System.out.println(node.getAddressAndPort() + "Couldn't find peers with the file");
             return;
         }
         this.threadPool = Executors.newFixedThreadPool(peersWithFile.size());
         System.out.println(
-            node.getAddressAndPortFormated() +
-            "[taskmanager]" +
-            " " +
-            requestList.size() +
-            " blocks to process"
-        );
+                node.getAddressAndPortFormated()
+                        + "[taskmanager]"
+                        + " "
+                        + requestList.size()
+                        + " blocks to process");
     }
 
     @Override
     public void run() {
         try {
-            node
-                .getListener()
-                .startDownloadProgress(
-                    fileInfo.getHash(),
-                    fileInfo.getFileName(),
-                    totalBlocks
-                );
+            node.getListener()
+                    .startDownloadProgress(fileInfo.getHash(), fileInfo.getFileName(), totalBlocks);
 
             long start = System.currentTimeMillis();
             processDownload();
@@ -96,32 +84,35 @@ public class DownloadTasksManager extends Thread {
             long safeDurationMs = Math.max(1L, duration);
             long bytesPerSecond = (fileInfo.getFileSize() * 1000L) / safeDurationMs;
 
-            node
-                .getListener()
-                .completeDownloadProgress(
-                    fileInfo.getHash(),
-                    duration,
-                    new HashMap<>(numberOfDownloadsForPeer)
-                );
+            node.getListener()
+                    .completeDownloadProgress(
+                            fileInfo.getHash(), duration, new HashMap<>(numberOfDownloadsForPeer));
             System.out.println(
-                node.getAddressAndPortFormated() +
-                "[taskmanager]" +
-                "Download finished for file " +
-                fileInfo.getFileName() + 
-                " [" + fileInfo.getFileSize() + "] at a rate of " +
-                bytesPerSecond +
-                " bytes/s"
-            );
+                    node.getAddressAndPortFormated()
+                            + "[taskmanager]"
+                            + "Download finished for file "
+                            + fileInfo.getFileName()
+                            + " ["
+                            + fileInfo.getFileSize()
+                            + "] at a rate of "
+                            + bytesPerSecond
+                            + " bytes/s");
             node.removeDownloadProcess(fileInfo.getHash());
             node.getListener().reloadListModel();
             node.loadHashes();
         } catch (Exception e) {
             node.getListener().finishDownloadProgress(fileInfo.getHash());
-            System.out.println(node.getAddressAndPortFormated() + "Error in DownloadTasksManager: " + e.getMessage());
+            System.out.println(
+                    node.getAddressAndPortFormated()
+                            + "Error in DownloadTasksManager: "
+                            + e.getMessage());
             // e.printStackTrace();
         } finally {
             if (!downloadSuccessful) {
-                System.err.println(node.getAddressAndPortFormated() + " [taskmanager] Download failed or interrupted. Deleting partial file: " + destinationFile.getAbsolutePath());
+                System.err.println(
+                        node.getAddressAndPortFormated()
+                                + " [taskmanager] Download failed or interrupted. Deleting partial file: "
+                                + destinationFile.getAbsolutePath());
                 if (destinationFile.exists()) {
                     destinationFile.delete();
                 }
@@ -130,10 +121,9 @@ public class DownloadTasksManager extends Thread {
 
         if (!running && !finished()) {
             System.out.println(
-                node.getAddressAndPortFormated() +
-                "[taskmanager]" +
-                "Download process was interrupted"
-            );
+                    node.getAddressAndPortFormated()
+                            + "[taskmanager]"
+                            + "Download process was interrupted");
         }
     }
 
@@ -147,12 +137,8 @@ public class DownloadTasksManager extends Thread {
     private void processDownload() {
         latch = new CountDownLatch(requestList.size());
         for (int i = 0; i < peersWithFile.size(); i++) {
-            DownloadAssistant assistant = new DownloadAssistant(
-                this,
-                latch,
-                peersWithFile.get(i),
-                i
-            );
+            DownloadAssistant assistant =
+                    new DownloadAssistant(this, latch, peersWithFile.get(i), i);
 
             runningAssistants++;
             threadPool.execute(assistant);
@@ -178,17 +164,13 @@ public class DownloadTasksManager extends Thread {
         byte[] actualHash = Utils.calculateFileHash(destinationFile.getAbsolutePath());
         if (!MessageDigest.isEqual(actualHash, fileInfo.getHash())) {
             throw new IOException(
-                "Hash mismatch for " + fileInfo.getFileName() + ", download is corrupted"
-            );
+                    "Hash mismatch for " + fileInfo.getFileName() + ", download is corrupted");
         }
     }
 
     public void addNumberOfDownloadsForPeer(String peer, int number) {
         if (numberOfDownloadsForPeer.containsKey(peer)) {
-            numberOfDownloadsForPeer.put(
-                peer,
-                numberOfDownloadsForPeer.get(peer) + number
-            );
+            numberOfDownloadsForPeer.put(peer, numberOfDownloadsForPeer.get(peer) + number);
         } else {
             numberOfDownloadsForPeer.put(peer, number);
         }
@@ -202,8 +184,7 @@ public class DownloadTasksManager extends Thread {
         return requestList.isEmpty();
     }
 
-    public synchronized FileBlockRequestMessage getDownloadRequest()
-        throws InterruptedException {
+    public synchronized FileBlockRequestMessage getDownloadRequest() throws InterruptedException {
         while (requestList.isEmpty()) wait();
 
         FileBlockRequestMessage request = requestList.remove(0);
@@ -214,15 +195,12 @@ public class DownloadTasksManager extends Thread {
         if (peersWithFile.contains(peer)) peersWithFile.remove(peer);
         if (peersWithFile.isEmpty() && !finished()) {
             throw new RuntimeException(
-                "No more nodes available with the file. Download process cannot continue."
-            );
+                    "No more nodes available with the file. Download process cannot continue.");
         }
         return peersWithFile.get(0);
     }
 
-    public synchronized void addDownloadRequest(
-        FileBlockRequestMessage request
-    ) {
+    public synchronized void addDownloadRequest(FileBlockRequestMessage request) {
         requestList.add(request);
         notifyAll();
     }
@@ -239,25 +217,23 @@ public class DownloadTasksManager extends Thread {
         try (RandomAccessFile raf = new RandomAccessFile(destinationFile, "rw")) {
             raf.seek(answer.getOffset());
             raf.write(answer.getData());
-            
+
             completedRequests.add(answer.getRequest());
             completedBlocks++;
             latch.countDown();
-            node
-                .getListener()
-                .updateDownloadProgress(fileInfo.getHash(), completedBlocks);
+            node.getListener().updateDownloadProgress(fileInfo.getHash(), completedBlocks);
             notifyAll();
         } catch (IOException e) {
-            System.err.println(node.getAddressAndPortFormated() + " Error writing block to disk: " + e.getMessage());
+            System.err.println(
+                    node.getAddressAndPortFormated()
+                            + " Error writing block to disk: "
+                            + e.getMessage());
             running = false;
         }
     }
 
-
-    public synchronized boolean waitForBlock(
-        FileBlockRequestMessage request,
-        long timeoutMs
-    ) throws InterruptedException {
+    public synchronized boolean waitForBlock(FileBlockRequestMessage request, long timeoutMs)
+            throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;
         while (!completedRequests.contains(request)) {
             long remaining = deadline - System.currentTimeMillis();
@@ -271,12 +247,7 @@ public class DownloadTasksManager extends Thread {
         ArrayList<SubNode> nodesWithFile = new ArrayList<>();
         for (FileSearchResult request : requests) {
             for (SubNode peer : node.getPeers()) {
-                if (
-                    peer.hasConnectionWith(
-                        request.getAddress(),
-                        request.getPort()
-                    )
-                ) {
+                if (peer.hasConnectionWith(request.getAddress(), request.getPort())) {
                     nodesWithFile.add(peer);
                 }
             }
